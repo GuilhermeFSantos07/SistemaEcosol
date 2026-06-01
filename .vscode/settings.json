@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "10.50.1.150",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "teste_banco",
+            "database": "ecosol_db",
+            "username": "admin_ti"
+        }
+    ]
+}
