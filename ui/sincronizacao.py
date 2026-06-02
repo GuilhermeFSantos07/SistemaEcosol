@@ -1,11 +1,15 @@
 import sqlite3
 import psycopg2
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 import shutil
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QGroupBox, QFormLayout, 
                              QTextEdit, QMessageBox, QApplication)
 from PyQt6.QtCore import Qt
+
+load_dotenv()
 
 class TelaSincronizacao(QWidget):
     def __init__(self):
@@ -24,10 +28,13 @@ class TelaSincronizacao(QWidget):
         grupo_credenciais = QGroupBox("Credenciais do Banco de Dados (PostgreSQL)")
         layout_form = QFormLayout()
 
-        self.input_host = QLineEdit(); self.input_host.setText("localhost")
-        self.input_porta = QLineEdit(); self.input_porta.setText("5432")
+        ip_servidor = os.getenv("DB_HOST", "localhost")
+        porta_servidor = os.getenv("DB_PORT", "5432")
+
+        self.input_host = QLineEdit(); self.input_host.setText(ip_servidor)
+        self.input_porta = QLineEdit(); self.input_porta.setText(porta_servidor)
         self.input_banco = QLineEdit(); self.input_banco.setText("ecosol_db")
-        self.input_usuario = QLineEdit(); self.input_usuario.setText("postgres")
+        self.input_usuario = QLineEdit() 
         self.input_senha = QLineEdit()
         self.input_senha.setEchoMode(QLineEdit.EchoMode.Password)
         

@@ -74,32 +74,45 @@ class TelaNovoCadastro(QWidget):
         layout_id = QFormLayout()
 
         self.input_razao = QLineEdit()
+        self.input_razao.setPlaceholderText("Digite o nome da empresa ou empreendimento")
         self.input_endereco = QLineEdit()
+        self.input_endereco.setPlaceholderText("Digite o endereço completo")
         self.input_cep = QLineEdit()
         self.input_cep.setInputMask("00000-000;0") 
         self.input_email = QLineEdit()
+        self.input_email.setPlaceholderText("Digite o e-mail ou site do empreendimento. Ex: contato@empreendimento.com ou www.empreendimento.com")
         self.input_cnpj = QLineEdit()
         self.input_cnpj.setInputMask("00.000.000/0000-00;0") 
         self.input_cpf = QLineEdit()
         self.input_cpf.setInputMask("000.000.000-00;0") 
         self.input_rg = QLineEdit()
+        self.input_rg.setPlaceholderText("Digite o RG do representante legal")
         self.input_rep_legal = QLineEdit()
+        self.input_rep_legal.setPlaceholderText("Digite o nome do representante legal")
         self.input_cor_raca = QLineEdit()
+        self.input_cor_raca.setPlaceholderText("Digite a cor/raça do representante legal")
 
-        # --- CAMPO SEXO (RadioButtons em linha) ---
+        # --- CAMPO SEXO (RadioButtons em linha + Campo "Outros" dinâmico) ---
         self.bg_sexo = QButtonGroup()
         widget_sexo = QWidget()
         layout_sexo = QHBoxLayout(widget_sexo)
         layout_sexo.setContentsMargins(0, 0, 0, 0)
         layout_sexo.setSpacing(15)
 
-        opcoes_sexo = ["Masculino", "Feminino", "Outros", "Prefiro não informar"]
+        opcoes_sexo = ["Masculino", "Feminino", "Prefiro não informar", "Outros"]
         self.radios_sexo = {}
         for op in opcoes_sexo:
             rb = QRadioButton(op)
             self.bg_sexo.addButton(rb)
             layout_sexo.addWidget(rb)
             self.radios_sexo[op] = rb
+
+        # Input de texto para a opção "Outros" no Sexo
+        self.input_outros_sexo = QLineEdit()
+        self.input_outros_sexo.setPlaceholderText("Especificar...")
+        self.input_outros_sexo.setEnabled(False)
+        self.radios_sexo["Outros"].toggled.connect(self.input_outros_sexo.setEnabled)
+        layout_sexo.addWidget(self.input_outros_sexo)
 
         layout_sexo.addStretch()
 
@@ -109,7 +122,7 @@ class TelaNovoCadastro(QWidget):
         layout_id.addRow("Razão Social / Nome Fantasia:", self.input_razao)
         layout_id.addRow("Endereço:", self.input_endereco)
         layout_id.addRow("CEP:", self.input_cep)
-        layout_id.addRow("E-mail / Internet:", self.input_email)
+        layout_id.addRow("E-mail / Site:", self.input_email)
         layout_id.addRow("CNPJ:", self.input_cnpj)
         layout_id.addRow("CPF:", self.input_cpf)
         layout_id.addRow("RG:", self.input_rg)
@@ -125,6 +138,7 @@ class TelaNovoCadastro(QWidget):
         layout_caract = QFormLayout()
         
         self.input_forma_ecosol = NonScrollComboBox()
+        self.input_forma_ecosol.setPlaceholderText("Selecione a forma de organização ECOSOL")
         self.input_forma_ecosol.addItems(["", "Cooperativa", "Associação", "Grupo Informal", "Outros"])
         self.input_outros_forma_ecosol = QLineEdit()
         self.input_outros_forma_ecosol.setPlaceholderText("Especificar Outros...")
@@ -159,10 +173,10 @@ class TelaNovoCadastro(QWidget):
         self.input_onde_comerc = QLineEdit()
         
         layout_benef = QHBoxLayout()
-        self.in_dir_m = QLineEdit(); self.in_dir_m.setPlaceholderText("Dir. M")
-        self.in_dir_f = QLineEdit(); self.in_dir_f.setPlaceholderText("Dir. F")
-        self.in_ind_m = QLineEdit(); self.in_ind_m.setPlaceholderText("Ind. M")
-        self.in_ind_f = QLineEdit(); self.in_ind_f.setPlaceholderText("Ind. F")
+        self.in_dir_m = QLineEdit(); self.in_dir_m.setPlaceholderText("Diretos Masculino")
+        self.in_dir_f = QLineEdit(); self.in_dir_f.setPlaceholderText("Diretos Feminino")
+        self.in_ind_m = QLineEdit(); self.in_ind_m.setPlaceholderText("Indiretos Masculino")
+        self.in_ind_f = QLineEdit(); self.in_ind_f.setPlaceholderText("Indiretos Feminino")
         layout_benef.addWidget(self.in_dir_m); layout_benef.addWidget(self.in_dir_f)
         layout_benef.addWidget(self.in_ind_m); layout_benef.addWidget(self.in_ind_f)
         
@@ -280,11 +294,27 @@ class TelaNovoCadastro(QWidget):
         scroll.setWidget(conteudo_scroll)
         layout_principal.addWidget(scroll)
 
-        # ================= BOTÃO DE SALVAR =================
-        self.btn_salvar = QPushButton("Salvar Cadastro Local e Gerar PDF")
-        self.btn_salvar.setStyleSheet("background-color: #28a745; color: white; padding: 15px; font-size: 16px; font-weight: bold;")
+        # ================= SEÇÃO DE BOTÕES (SALVAR E PDF SEPARADOS) =================
+        layout_botoes = QHBoxLayout()
+        layout_botoes.setSpacing(15)
+        layout_botoes.addStretch() # Empurra os botões para ficarem centralizados
+
+        # Botão Salvar
+        self.btn_salvar = QPushButton("💾 Salvar Cadastro Local")
+        self.btn_salvar.setStyleSheet("background-color: #28a745; color: white; padding: 10px 15px; font-size: 14px; font-weight: bold; border-radius: 4px;")
+        self.btn_salvar.setFixedWidth(200) # Define uma largura menor fixa
         self.btn_salvar.clicked.connect(self.salvar_cadastro)
-        layout_principal.addWidget(self.btn_salvar)
+        layout_botoes.addWidget(self.btn_salvar)
+
+        # Botão Gerar PDF
+        self.btn_pdf = QPushButton("📄 Gerar PDF")
+        self.btn_pdf.setStyleSheet("background-color: #dc3545; color: white; padding: 10px 15px; font-size: 14px; font-weight: bold; border-radius: 4px;")
+        self.btn_pdf.setFixedWidth(200) # Define uma largura menor fixa
+        self.btn_pdf.clicked.connect(self.gerar_pdf)
+        layout_botoes.addWidget(self.btn_pdf)
+
+        layout_botoes.addStretch() # Fecha o alinhamento centralizado
+        layout_principal.addLayout(layout_botoes)
 
     def criar_grupo_checkboxes(self, opcoes, layout, label_texto):
         widget_cb = QWidget()
@@ -308,6 +338,16 @@ class TelaNovoCadastro(QWidget):
             self.arquivos_anexados.extend(arquivos)
             self.lbl_arquivos.setText(f"{len(self.arquivos_anexados)} arquivo(s) selecionado(s).")
 
+    def gerar_pdf(self):
+        """ Método acionado ao clicar no botão 'Gerar PDF' """
+        razao = self.input_razao.text().strip()
+        if not razao:
+            QMessageBox.warning(self, "Aviso", "Preencha ao menos a Razão Social para gerar o PDF!")
+            return
+            
+        # TODO: Insira aqui o seu código de geração da biblioteca ReportLab ou fpdf
+        QMessageBox.information(self, "PDF", f"Documento PDF de coleta criado para:\n{razao}")
+
     def salvar_cadastro(self):
         # 1. Tipo de Cadastro
         tipo_cadastro = ""
@@ -323,22 +363,44 @@ class TelaNovoCadastro(QWidget):
         # 2. Capturar e Limpar Dados
         razao = self.input_razao.text().strip()
         endereco = self.input_endereco.text().strip()
-        cep = self.input_cep.text().replace("_", "").replace("-", "")
         email = self.input_email.text().strip()
-        cnpj = self.input_cnpj.text().replace("_", "").replace(".", "").replace("/", "").replace("-", "")
-        cpf = self.input_cpf.text().replace("_", "").replace(".", "").replace("-", "")
         rg = self.input_rg.text().strip()
-        telefone = self.input_telefone.text().replace("_", "").replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
+
+        # 2. Capturar e Limpar Dados
+        razao = self.input_razao.text().strip()
+        endereco = self.input_endereco.text().strip()
+        email = self.input_email.text().strip()
+        rg = self.input_rg.text().strip()
+
+        # Limpeza e verificação dos campos com máscara de zero
+        cep = self.input_cep.text().replace("-", "")
+        if cep == "00000000": 
+            cep = ""
+
+        cnpj = self.input_cnpj.text().replace(".", "").replace("/", "").replace("-", "")
+        if cnpj == "00000000000000": 
+            cnpj = ""
+
+        cpf = self.input_cpf.text().replace(".", "").replace("-", "")
+        if cpf == "00000000000": 
+            cpf = ""
+
+        telefone = self.input_telefone.text().replace("(", "").replace(")", "").replace(" ", "").replace("-", "")
+        if telefone == "00000000000": 
+            telefone = ""
 
         if not razao:
             QMessageBox.warning(self, "Aviso", "A Razão Social/Nome é obrigatória!")
             return
 
-        # Captura o sexo selecionado (vazio se nenhum marcado)
+        # Captura o sexo selecionado e concatena com a especificação se for "Outros"
         sexo = ""
         for texto, rb in self.radios_sexo.items():
             if rb.isChecked():
-                sexo = texto
+                if texto == "Outros":
+                    sexo = f"Outros: {self.input_outros_sexo.text().strip()}"
+                else:
+                    sexo = texto
                 break
 
         val_forma_ecosol = f"Outros: {self.input_outros_forma_ecosol.text().strip()}" if self.input_forma_ecosol.currentText() == "Outros" else self.input_forma_ecosol.currentText()
@@ -439,6 +501,7 @@ class TelaNovoCadastro(QWidget):
         self.in_ind_f.clear()
 
         self.input_outros_tipo.clear()
+        self.input_outros_sexo.clear() # Limpa o novo campo adicionado
         self.input_outros_forma_ecosol.clear()
         self.input_outros_forma_emp.clear()
         self.input_outros_segmento.clear()
