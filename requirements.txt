@@ -1,0 +1,15 @@
+#   ECOSOL AM — Dependências do Projeto
+#   Instale com: pip install -r requirements.txt
+
+# Interface Gráfica (GUI)
+PyQt6>=6.4.0
+
+# Banco de Dados PostgreSQL (sincronização com servidor)
+psycopg2-binary>=2.9.6
+
+# Variáveis de Ambiente (.env)
+python-dotenv>=1.0.0
+
+# Geração de PDF (módulo gerador_pdf.py — a implementar)
+# reportlab>=4.0.0
+# fpdf2>=2.7.   

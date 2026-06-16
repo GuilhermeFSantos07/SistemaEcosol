@@ -20,6 +20,7 @@ from ui.login import TelaLogin
 from ui.form_ecosol import TelaNovoCadastro
 from ui.sincronizacao import TelaSincronizacao
 from ui.cadastro_user import TelaUsuarios
+from ui.cadastros import TelaCadastros
 
 class PainelSistema(QWidget):
     """Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé"""
@@ -67,14 +68,15 @@ class PainelSistema(QWidget):
         divider.setStyleSheet("background-color: rgba(255,255,255,0.15); margin: 0 4px 12px 4px; max-height: 1px; border: none;")
         layout_sidebar.addWidget(divider)
         
-        self.btn_cadastro = QPushButton("📝 Novo Cadastro")
-        self.btn_sincronizacao = QPushButton("🔄 Sincronização")
-        self.btn_relatorios = QPushButton("📊 Relatórios")
-        self.btn_usuarios = QPushButton("👥 Gerenciar Usuários")
-        self.btn_sair = QPushButton("🚪 Sair do Sistema")
+        self.btn_cadastro = QPushButton("Novo Cadastro")
+        self.btn_sincronizacao = QPushButton("Sincronização")
+        self.btn_cadastros = QPushButton("Cadastros Existentes")
+        self.btn_relatorios = QPushButton("Relatórios")
+        self.btn_usuarios = QPushButton("Gerenciar Usuários")
+        self.btn_sair = QPushButton("Sair do Sistema")
         self.btn_sair.setObjectName("BtnSair")
         
-        for btn in [self.btn_cadastro, self.btn_sincronizacao, self.btn_relatorios, self.btn_usuarios]:
+        for btn in [self.btn_cadastro, self.btn_sincronizacao, self.btn_cadastros, self.btn_relatorios, self.btn_usuarios]:
             btn.setObjectName("BtnMenu")
             layout_sidebar.addWidget(btn)
             
@@ -94,15 +96,18 @@ class PainelSistema(QWidget):
         self.tela_novo_cadastro = TelaNovoCadastro(self, usuario_logado_id=self.usuario_id)
         self.tela_usuarios = TelaUsuarios()
         self.tela_sincronizacao = TelaSincronizacao()
+        self.tela_cadastros = TelaCadastros()
         self.tela_relatorios = QLabel("<h2>Tela de Relatórios em Construção</h2>")
         self.tela_relatorios.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.conteudo_stack.addWidget(self.tela_novo_cadastro) 
-        self.conteudo_stack.addWidget(self.tela_sincronizacao)   
+        self.conteudo_stack.addWidget(self.tela_sincronizacao)
+        self.conteudo_stack.addWidget(self.tela_cadastros)   
         self.conteudo_stack.addWidget(self.tela_relatorios)      
         self.conteudo_stack.addWidget(self.tela_usuarios)        
         
         self.btn_cadastro.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_novo_cadastro))
+        self.btn_cadastros.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_cadastros))
         self.btn_sincronizacao.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_sincronizacao))
         self.btn_relatorios.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_relatorios))
         self.btn_usuarios.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_usuarios))
