@@ -21,6 +21,8 @@ from ui.form_ecosol import TelaNovoCadastro
 from ui.sincronizacao import TelaSincronizacao
 from ui.cadastro_user import TelaUsuarios
 from ui.cadastros import TelaCadastros
+from ui.re
+from utils.seguranca import Seguranca
 
 class PainelSistema(QWidget):
     """Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé"""
@@ -69,20 +71,16 @@ class PainelSistema(QWidget):
         layout_sidebar.addWidget(divider)
         
         self.btn_cadastro = QPushButton("Novo Cadastro")
-        self.btn_sincronizacao = QPushButton("Sincronização")
         self.btn_cadastros = QPushButton("Cadastros Existentes")
+        self.btn_sincronizacao = QPushButton("Sincronização")
         self.btn_relatorios = QPushButton("Relatórios")
         self.btn_usuarios = QPushButton("Gerenciar Usuários")
         self.btn_sair = QPushButton("Sair do Sistema")
         self.btn_sair.setObjectName("BtnSair")
         
-        for btn in [self.btn_cadastro, self.btn_sincronizacao, self.btn_cadastros, self.btn_relatorios, self.btn_usuarios]:
+        for btn in [self.btn_cadastro, self.btn_cadastros, self.btn_sincronizacao, self.btn_relatorios, self.btn_usuarios]:
             btn.setObjectName("BtnMenu")
             layout_sidebar.addWidget(btn)
-            
-        # Controle de nível de acesso (garantido pelo .lower() no banco)
-        if self.nivel_acesso != "admin":
-            self.btn_usuarios.setVisible(False)
             
         layout_sidebar.addStretch()
         layout_sidebar.addWidget(self.btn_sair)
@@ -133,6 +131,7 @@ class PainelSistema(QWidget):
 
         layout_mestre.addWidget(barra_rodape)
 
+        Seguranca.configurar_painel(self, self.nivel_acesso)
 
 class JanelaPrincipal(QMainWindow):
     """Janela Mestra do Software"""
