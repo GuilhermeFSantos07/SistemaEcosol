@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 # Carrega as variáveis do .env
 load_dotenv()
 
-COR_PRIMARIA = os.getenv("COR_PRIMARIA", "#003366")
-COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER", "#004080")
-COR_BARRA_RODAPE = os.getenv("COR_BARRA_RODAPE", "#111111")
-COR_TEXTO_CLARO = os.getenv("COR_TEXTO_CLARO", "#ffffff")
-COR_FUNDO_CLARO = os.getenv("COR_FUNDO_CLARO", "#f8f9fa")
+COR_PRIMARIA = os.getenv("COR_PRIMARIA",                "#003366")
+COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER",    "#004080")
+COR_BARRA_RODAPE = os.getenv("COR_BARRA_RODAPE",        "#111111")
+COR_TEXTO_CLARO = os.getenv("COR_TEXTO_CLARO",          "#ffffff")
+COR_FUNDO_CLARO = os.getenv("COR_FUNDO_CLARO",          "#f8f9fa")
 
 # Importações das suas telas modulares
 from ui.login import TelaLogin
@@ -21,11 +21,10 @@ from ui.form_ecosol import TelaNovoCadastro
 from ui.sincronizacao import TelaSincronizacao
 from ui.cadastro_user import TelaUsuarios
 from ui.cadastros import TelaCadastros
-from ui.re
-from utils.seguranca import Seguranca
+from ui.relatorios import TelaRelatorios
 
 class PainelSistema(QWidget):
-    """Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé"""
+    # Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé
     def __init__(self, usuario_id, nivel_acesso, ao_deslogar):
         super().__init__()
         self.usuario_id = usuario_id
@@ -37,7 +36,7 @@ class PainelSistema(QWidget):
         layout_mestre.setContentsMargins(0, 0, 0, 0)
         layout_mestre.setSpacing(0)
         
-        # ================= CORPO DO SISTEMA (Sidebar + Telas) =================
+        # CORPO DO SISTEMA (Sidebar + Telas)
         corpo_sistema = QWidget()
         layout_corpo = QHBoxLayout(corpo_sistema)
         layout_corpo.setContentsMargins(0, 0, 0, 0)
@@ -71,16 +70,20 @@ class PainelSistema(QWidget):
         layout_sidebar.addWidget(divider)
         
         self.btn_cadastro = QPushButton("Novo Cadastro")
-        self.btn_cadastros = QPushButton("Cadastros Existentes")
         self.btn_sincronizacao = QPushButton("Sincronização")
+        self.btn_cadastros = QPushButton("Cadastros Existentes")
         self.btn_relatorios = QPushButton("Relatórios")
         self.btn_usuarios = QPushButton("Gerenciar Usuários")
         self.btn_sair = QPushButton("Sair do Sistema")
         self.btn_sair.setObjectName("BtnSair")
         
-        for btn in [self.btn_cadastro, self.btn_cadastros, self.btn_sincronizacao, self.btn_relatorios, self.btn_usuarios]:
+        for btn in [self.btn_cadastro, self.btn_sincronizacao, self.btn_cadastros, self.btn_relatorios, self.btn_usuarios]:
             btn.setObjectName("BtnMenu")
             layout_sidebar.addWidget(btn)
+            
+        # Controle de nível de acesso (garantido pelo .lower() no banco)
+        if self.nivel_acesso != "admin":
+            self.btn_usuarios.setVisible(False)
             
         layout_sidebar.addStretch()
         layout_sidebar.addWidget(self.btn_sair)
@@ -95,8 +98,7 @@ class PainelSistema(QWidget):
         self.tela_usuarios = TelaUsuarios()
         self.tela_sincronizacao = TelaSincronizacao()
         self.tela_cadastros = TelaCadastros()
-        self.tela_relatorios = QLabel("<h2>Tela de Relatórios em Construção</h2>")
-        self.tela_relatorios.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tela_relatorios = TelaRelatorios()
         
         self.conteudo_stack.addWidget(self.tela_novo_cadastro) 
         self.conteudo_stack.addWidget(self.tela_sincronizacao)
@@ -111,11 +113,16 @@ class PainelSistema(QWidget):
         self.btn_usuarios.clicked.connect(lambda: self.conteudo_stack.setCurrentWidget(self.tela_usuarios))
         self.btn_sair.clicked.connect(self.ao_deslogar)
 
+        # ATUALIZAÇÃO AUTOMÁTICA: o QStackedWidget emite "currentChanged" toda vez
+        # que a tela visível troca (seja por clique no menu ou qualquer outro motivo).
+        # Conectamos esse sinal a um método que decide o que recarregar.
+        self.conteudo_stack.currentChanged.connect(self._atualizar_tela_atual)
+
         # Adiciona o stack de conteúdo ao corpo uma única vez (Linha duplicada corrigida aqui)
         layout_corpo.addWidget(self.conteudo_stack)
         layout_mestre.addWidget(corpo_sistema, stretch=1)
 
-        # ================= BARRA DE RODAPÉ INSTITUCIONAL =================
+        # BARRA DE RODAPÉ INSTITUCIONAL
         barra_rodape = QFrame()
         barra_rodape.setObjectName("Rodape")
         barra_rodape.setFixedHeight(35)
@@ -131,10 +138,37 @@ class PainelSistema(QWidget):
 
         layout_mestre.addWidget(barra_rodape)
 
-        Seguranca.configurar_painel(self, self.nivel_acesso)
+    # _atualizar_tela_atual
+    # Chamado automaticamente sempre que o conteudo_stack troca de tela visível
+    # (via sinal currentChanged). Identifica qual tela ficou visível e chama
+    # o método de recarregamento correspondente, garantindo que Cadastros e
+    # Relatórios sempre mostrem os dados mais recentes do banco local.
+    # Cada tela pode ter um método de recarregamento diferente, então usamos
+    # hasattr() para chamar o método certo sem dar erro caso a tela mude no futuro.
+    def _atualizar_tela_atual(self, indice):
+        tela_visivel = self.conteudo_stack.widget(indice)  # Pega o widget da tela que ficou ativa
+
+        # TelaCadastros: refaz a pesquisa atual (respeitando filtro já digitado)
+        if tela_visivel is self.tela_cadastros and hasattr(tela_visivel, "pesquisar"):
+            tela_visivel.pesquisar()
+
+        # TelaRelatorios: atualiza os cards de estatística e os combos de filtro
+        elif tela_visivel is self.tela_relatorios and hasattr(tela_visivel, "atualizar_estatisticas"):
+            tela_visivel.atualizar_estatisticas()
+            # Também repopula os combos de filtro (tipo/local), pois novos cadastros
+            # podem ter introduzido tipos ou locais que ainda não estavam na lista
+            if hasattr(tela_visivel, "popular_filtro_tipo"):
+                tela_visivel.filtro_tipo.clear()
+                tela_visivel.filtro_tipo.addItem("Todos")
+                tela_visivel.popular_filtro_tipo()
+            if hasattr(tela_visivel, "popular_filtro_local"):
+                tela_visivel.filtro_local.clear()
+                tela_visivel.filtro_local.addItem("Todos")
+                tela_visivel.popular_filtro_local()
+
 
 class JanelaPrincipal(QMainWindow):
-    """Janela Mestra do Software"""
+    # Janela Mestra do Software
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sistema Ecosol - Cadastro Offline")
@@ -160,7 +194,7 @@ class JanelaPrincipal(QMainWindow):
         self.showMaximized()
 
 
-# ================= STYLESHEET (QSS) DINÂMICO =================
+# STYLESHEET (QSS) DINÂMICO
 STYLE_FIEL_BLINDADO = f"""
     /* ── BASE ── */
     QWidget {{

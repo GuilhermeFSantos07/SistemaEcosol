@@ -5,12 +5,12 @@ import os           # Leitura das variáveis de ambiente do .env
 from dotenv import load_dotenv  # Carrega o arquivo .env para os.getenv() funcionar
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,  # Layouts principais
-    QLabel, QLineEdit, QPushButton,                   # Widgets básicos de formulário
-    QTableWidget, QTableWidgetItem,                   # Tabela de listagem de usuários
-    QComboBox, QMessageBox,                           # Combo de nível de acesso e caixas de diálogo
-    QHeaderView, QGroupBox, QScrollArea,              # Cabeçalho da tabela, agrupador e scroll
-    QFrame, QApplication                              # Frame para separadores e atualização de UI
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, # Layouts principais
+    QLabel, QLineEdit, QPushButton,                 # Widgets básicos de formulário
+    QTableWidget, QTableWidgetItem,                 # Tabela de listagem de usuários
+    QComboBox, QMessageBox,                         # Combo de nível de acesso e caixas de diálogo
+    QHeaderView, QGroupBox, QScrollArea,            # Cabeçalho da tabela, agrupador e scroll
+    QFrame, QApplication                            # Frame para separadores e atualização de UI
 )
 from PyQt6.QtCore import Qt       # Constantes de alinhamento e flags
 from PyQt6.QtGui import QColor    # Para colorir células da tabela se necessário
@@ -18,22 +18,20 @@ from PyQt6.QtGui import QColor    # Para colorir células da tabela se necessár
 # Carrega as variáveis definidas no arquivo .env para que os os.getenv() abaixo funcionem
 load_dotenv()
 
-COR_PRIMARIA       = os.getenv("COR_PRIMARIA",       "#003366")  # Azul escuro — título, bordas, GroupBox
-COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER", "#004080")  # Azul mais escuro — hover dos botões
-COR_SECUNDARIA     = os.getenv("COR_SECUNDARIA",     "#17a2b8")  # Azul ciano — botão Editar
-COR_ALERTA         = os.getenv("COR_ALERTA",         "#dc3545")  # Vermelho — botão Excluir
+COR_PRIMARIA       = os.getenv("COR_PRIMARIA",      "#003366")  # Azul escuro — título, bordas, GroupBox
+COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER","#004080")  # Azul mais escuro — hover dos botões
+COR_SECUNDARIA     = os.getenv("COR_SECUNDARIA",    "#17a2b8")  # Azul ciano — botão Editar
+COR_ALERTA         = os.getenv("COR_ALERTA",        "#dc3545")  # Vermelho — botão Excluir
 COR_FUNDO_CLARO    = os.getenv("COR_FUNDO_CLARO",   "#f8f9fa")  # Cinza muito claro — fundo geral
-COR_TEXTO_ESCURO   = os.getenv("COR_TEXTO_ESCURO",   "#212529")  # Quase preto — texto dos labels
-COR_TEXTO_CLARO    = os.getenv("COR_TEXTO_CLARO",    "#ffffff")  # Branco — texto sobre fundo colorido
-COR_BORDA          = os.getenv("COR_BORDA",          "#ced4da")  # Cinza suave — bordas dos inputs
+COR_TEXTO_ESCURO   = os.getenv("COR_TEXTO_ESCURO",  "#212529")  # Quase preto — texto dos labels
+COR_TEXTO_CLARO    = os.getenv("COR_TEXTO_CLARO",   "#ffffff")  # Branco — texto sobre fundo colorido
+COR_BORDA          = os.getenv("COR_BORDA",         "#ced4da")  # Cinza suave — bordas dos inputs
 COR_SALVAR         = "#28a745"   # Verde fixo — botão Salvar (sem variável no .env, igual ao form_ecosol)
 COR_SALVAR_HOVER   = "#218838"   # Verde escuro — hover do botão Salvar
-
 
 class TelaUsuarios(QWidget):
     def __init__(self):
         super().__init__()
-
         # Armazena o ID do usuário em edição (None = modo de criação, string = modo de edição)
         self.usuario_em_edicao_id = None
 
@@ -54,7 +52,7 @@ class TelaUsuarios(QWidget):
         layout_principal.setContentsMargins(30, 20, 30, 20)  # Margens externas da tela
         layout_principal.setSpacing(16)                       # Espaço entre os blocos
 
-        # ----- CABEÇALHO DA TELA -----
+        # CABEÇALHO DA TELA
         # Título principal com linha decorativa inferior — idêntico ao form_ecosol e sincronizacao
         titulo = QLabel("GERENCIAMENTO DE USUÁRIOS")
         titulo.setStyleSheet(
@@ -106,26 +104,26 @@ class TelaUsuarios(QWidget):
         layout_grid.setColumnStretch(1, 1)     # Coluna do 1º input é elástica (ocupa espaço disponível)
         layout_grid.setColumnStretch(3, 1)     # Coluna do 2º input é elástica
 
-        # ----- Campo: Nome Completo (linha 0, colunas 0-1) -----
+        # Campo: Nome Completo (linha 0, colunas 0-1)
         self.input_nome = QLineEdit()
         self.input_nome.setPlaceholderText("Digite o nome completo do usuário")
         layout_grid.addWidget(QLabel("Nome Completo:"), 0, 0)   # Label na coluna 0
         layout_grid.addWidget(self.input_nome, 0, 1)            # Input na coluna 1
 
-        # ----- Campo: Login / Nome de Usuário (linha 0, colunas 2-3) -----
+        # Campo: Login / Nome de Usuário (linha 0, colunas 2-3)
         self.input_login = QLineEdit()
         self.input_login.setPlaceholderText("Nome de usuário para login")
         layout_grid.addWidget(QLabel("Nome de Usuário (Login):"), 0, 2)  # Label na coluna 2
         layout_grid.addWidget(self.input_login, 0, 3)                    # Input na coluna 3
 
-        # ----- Campo: Senha (linha 1, colunas 0-1) -----
+        # Campo: Senha (linha 1, colunas 0-1)
         self.input_senha = QLineEdit()
         self.input_senha.setPlaceholderText("Senha do usuário")
         self.input_senha.setEchoMode(QLineEdit.EchoMode.Password)  # Oculta os caracteres digitados
         layout_grid.addWidget(QLabel("Senha:"), 1, 0)
         layout_grid.addWidget(self.input_senha, 1, 1)
 
-        # ----- Campo: Nível de Acesso (linha 1, colunas 2-3) -----
+        # Campo: Nível de Acesso (linha 1, colunas 2-3)
         self.input_nivel = QComboBox()
         self.input_nivel.addItems(["operador", "visualizador", "admin"])  # Opções de nível disponíveis
         layout_grid.addWidget(QLabel("Nível de Acesso:"), 1, 2)
@@ -134,7 +132,7 @@ class TelaUsuarios(QWidget):
         self.grupo_form.setLayout(layout_grid)       # Aplica o grid ao GroupBox
         layout_principal.addWidget(self.grupo_form)  # Adiciona o GroupBox ao layout da tela
 
-        # ----- BARRA DE BOTÕES DO FORMULÁRIO -----
+        # BARRA DE BOTÕES DO FORMULÁRIO
         # Botões Salvar e Cancelar centralizados, com mesmo estilo do form_ecosol
         layout_botoes_form = QHBoxLayout()
         layout_botoes_form.setSpacing(12)

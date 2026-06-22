@@ -4,11 +4,11 @@ import uuid
 import os
 
 def gerar_hash_senha(senha):
-    """Criptografa a senha antes de salvar ou validar no banco."""
+    #Criptografa a senha antes de salvar ou validar no banco
     return hashlib.sha256(senha.encode()).hexdigest()
 
 def inicializar_banco_local():
-    """Cria o banco SQLite e um usuário Admin padrão se não existir."""
+    #Cria o banco SQLite e um usuário Admin padrão se não existir
     conn = sqlite3.connect('ecosol_local.db')
     cursor = conn.cursor()
     
@@ -24,6 +24,7 @@ def inicializar_banco_local():
         )
     ''')
     
+    # Criação da tabela de cadastros ecosol
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cadastros_ecosol (
             id                          TEXT PRIMARY KEY,
@@ -66,16 +67,18 @@ def inicializar_banco_local():
             data_formulario             TEXT,
             data_cadastro               TEXT, 
             responsavel_id              TEXT, 
+            grupo_id                    TEXT,
             sincronizado                INTEGER DEFAULT 0
         )
     ''')
 
-    # Migração segura: adiciona a coluna 'sexo' se o banco já existia sem ela
-    try:
-        cursor.execute("ALTER TABLE cadastros_ecosol ADD COLUMN sexo TEXT")
-    except sqlite3.OperationalError:
-        pass  # Coluna já existe, tudo certo
+    # Preenchimento retroativo: cadastros antigos (criados antes desta atualização)
+    # não têm grupo_id definido ainda. Para cada um deles, o próprio "id" passa a
+    # ser também o "grupo_id" — ou seja, cada cadastro antigo se torna a primeira
+    # (e por ora única) versão de sua própria história.
+    cursor.execute("UPDATE cadastros_ecosol SET grupo_id = id WHERE grupo_id IS NULL")
     
+    # Criação da tabela de arquivos anexos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS arquivos_anexos (
             id TEXT         PRIMARY KEY, 

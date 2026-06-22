@@ -1,9 +1,7 @@
-# =============================================================================
 # sincronizacao.py
 # Tela de sincronização entre o banco local SQLite e o servidor PostgreSQL.
 # Usa as mesmas variáveis de cor do .env que o form_ecosol.py para manter
 # a identidade visual consistente em toda a aplicação.
-# =============================================================================
 
 import sqlite3
 import psycopg2
@@ -19,28 +17,23 @@ from PyQt6.QtCore import Qt
 # Carrega o .env para que os os.getenv() abaixo consigam ler as variáveis
 load_dotenv()
 
-# =============================================================================
 # PALETA DE CORES — lidas do .env, espelhando exatamente o form_ecosol.py
 # Centraliza a identidade visual: mudar o .env reestiliza toda a aplicação
-# =============================================================================
 COR_PRIMARIA       = os.getenv("COR_PRIMARIA",       "#003366")  # Azul escuro — título, bordas de foco, GroupBox
 COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER", "#004080")  # Azul mais escuro — estado hover dos botões
 COR_SECUNDARIA     = os.getenv("COR_SECUNDARIA",     "#17a2b8")  # Azul ciano — botão "Testar Conexão"
-COR_FUNDO_CLARO    = os.getenv("COR_FUNDO_CLARO",   "#f8f9fa")  # Cinza muito claro — fundo do console de log
+COR_FUNDO_CLARO    = os.getenv("COR_FUNDO_CLARO",    "#f8f9fa")  # Cinza muito claro — fundo do console de log
 COR_TEXTO_ESCURO   = os.getenv("COR_TEXTO_ESCURO",   "#212529")  # Quase preto — texto do console e labels
 COR_TEXTO_CLARO    = os.getenv("COR_TEXTO_CLARO",    "#ffffff")  # Branco — texto sobre fundos coloridos
 COR_BORDA          = os.getenv("COR_BORDA",          "#ced4da")  # Cinza suave — bordas dos inputs e GroupBox
-COR_ENVIAR         = "#28a745"                                    # Verde fixo — botão Enviar (sem variável no .env)
-COR_ENVIAR_HOVER   = "#218838"                                    # Verde escuro — hover do botão Enviar
+COR_ENVIAR         = "#28a745"                                   # Verde fixo — botão Enviar (sem variável no .env)
+COR_ENVIAR_HOVER   = "#218838"                                   # Verde escuro — hover do botão Enviar
 COR_BAIXAR         = os.getenv("COR_ALERTA",         "#dc3545")  # Vermelho do .env — botão Baixar/Atualizar
-COR_BAIXAR_HOVER   = "#c82333"                                    # Vermelho escuro — hover do botão Baixar
+COR_BAIXAR_HOVER   = "#c82333"                                   # Vermelho escuro — hover do botão Baixar
 
-
-# =============================================================================
 # TelaSincronizacao
 # Widget que permite ao usuário configurar as credenciais do PostgreSQL,
 # testar a conexão, enviar dados locais para o servidor e baixar atualizações.
-# =============================================================================
 class TelaSincronizacao(QWidget):
     def __init__(self):
         super().__init__()
@@ -65,7 +58,7 @@ class TelaSincronizacao(QWidget):
         # Centraliza o conteudo no layout raiz
         layout_raiz.addWidget(conteudo, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # ----- TÍTULO DA TELA -----
+        # TÍTULO DA TELA
         # Usa COR_PRIMARIA para manter visual idêntico ao form_ecosol
         titulo = QLabel("SINCRONIZAÇÃO COM O SERVIDOR TI")
         titulo.setStyleSheet(
@@ -76,11 +69,9 @@ class TelaSincronizacao(QWidget):
         )
         layout_principal.addWidget(titulo)
 
-        # =================================================================
         # GRUPO: CREDENCIAIS DO POSTGRESQL
         # Campos organizados em grid 2 colunas (label | input) para aproveitar
         # melhor o espaço horizontal — padrão do form_ecosol
-        # =================================================================
         grupo_credenciais = QGroupBox("Credenciais do Banco de Dados (PostgreSQL)")
         # QSS do grupo de credenciais, espelhando o padrão visual do form_ecosol
         grupo_credenciais.setStyleSheet(f"""
@@ -157,18 +148,16 @@ class TelaSincronizacao(QWidget):
         grupo_credenciais.setLayout(layout_grid)
         layout_principal.addWidget(grupo_credenciais)
 
-        # =================================================================
         # BARRA DE BOTÕES DE AÇÃO — 3 botões lado a lado, centralizados
         # Mesmo padrão de tamanho e layout dos botões do form_ecosol
         # (Salvar: 240px, Gerar PDF: 240px → aqui usamos o mesmo fixedWidth)
-        # =================================================================
         layout_botoes = QHBoxLayout()
         layout_botoes.setSpacing(20)
         layout_botoes.setContentsMargins(0, 5, 0, 5)
         layout_botoes.addStretch()  # Empurra os botões para o centro
 
         # Botão Testar Conexão — azul ciano (COR_SECUNDARIA), igual ao form_ecosol
-        self.btn_testar = QPushButton("🔌 Testar Conexão")
+        self.btn_testar = QPushButton("Testar Conexão")
         self.btn_testar.setFixedWidth(240)  # Mesmo fixedWidth dos botões do form_ecosol
         self.btn_testar.setStyleSheet(f"""
             QPushButton {{
@@ -187,7 +176,7 @@ class TelaSincronizacao(QWidget):
         layout_botoes.addWidget(self.btn_testar)
 
         # Botão Enviar — verde fixo (COR_ENVIAR), espelhando o btn_salvar do form_ecosol
-        self.btn_enviar = QPushButton("⬆️ Enviar Dados")
+        self.btn_enviar = QPushButton("⬆ Enviar Dados")
         self.btn_enviar.setFixedWidth(240)
         self.btn_enviar.setStyleSheet(f"""
             QPushButton {{
@@ -206,7 +195,7 @@ class TelaSincronizacao(QWidget):
         layout_botoes.addWidget(self.btn_enviar)
 
         # Botão Baixar — vermelho (COR_BAIXAR = COR_ALERTA do .env), espelhando btn_pdf
-        self.btn_baixar = QPushButton("⬇️ Atualizar Local")
+        self.btn_baixar = QPushButton("⬇ Atualizar Local")
         self.btn_baixar.setFixedWidth(240)
         self.btn_baixar.setStyleSheet(f"""
             QPushButton {{
@@ -227,11 +216,9 @@ class TelaSincronizacao(QWidget):
         layout_botoes.addStretch()  # Fecha o centering
         layout_principal.addLayout(layout_botoes)
 
-        # =================================================================
         # CONSOLE DE LOG
         # Área de texto somente leitura que exibe o progresso da sincronização
         # em tempo real (linha a linha, via self.log())
-        # =================================================================
         lbl_status = QLabel("<b>Status da Sincronização:</b>")
         lbl_status.setStyleSheet(f"color: {COR_TEXTO_ESCURO}; font-size: 13px;")
         layout_principal.addWidget(lbl_status)
@@ -249,24 +236,18 @@ class TelaSincronizacao(QWidget):
         )
         layout_principal.addWidget(self.console_log)  # O console ocupa o espaço restante
 
-
-    # =========================================================================
     # log
     # Appenda uma mensagem ao console e força o redesenho imediato da tela.
     # processEvents() é necessário pois a sincronização roda na thread principal
     # e sem ele a UI ficaria congelada durante o processo.
-    # =========================================================================
     def log(self, mensagem):
         self.console_log.append(f"> {mensagem}")  # Prefixo ">" facilita leitura no console
         QApplication.processEvents()              # Força atualização visual imediata
 
-
-    # =========================================================================
     # obter_conexao_pg
     # Cria e retorna uma conexão psycopg2 com o PostgreSQL usando os valores
     # digitados nos inputs da tela. Lança exceção se a conexão falhar,
     # que é capturada pelos métodos chamadores (testar_conexao, enviar, baixar).
-    # =========================================================================
     def obter_conexao_pg(self):
         return psycopg2.connect(
             host=self.input_host.text().strip(),      # IP ou hostname do servidor
@@ -276,12 +257,9 @@ class TelaSincronizacao(QWidget):
             password=self.input_senha.text().strip()   # Senha do banco
         )
 
-
-    # =========================================================================
     # testar_conexao
     # Apenas abre e fecha uma conexão para validar as credenciais.
     # Exibe mensagem de sucesso ou erro no console e em um QMessageBox.
-    # =========================================================================
     def testar_conexao(self):
         self.log("Testando conexão com o servidor PostgreSQL...")
         try:
@@ -293,8 +271,6 @@ class TelaSincronizacao(QWidget):
             self.log(f"ERRO DE CONEXÃO: {str(e)}")
             QMessageBox.critical(self, "Erro", f"Falha ao conectar:\n{str(e)}")
 
-
-    # =========================================================================
     # enviar_dados
     # Sincroniza do SQLite local para o PostgreSQL em 3 etapas:
     #   Etapa 1  — Garante que os usuários responsáveis por cadastros pendentes
@@ -302,7 +278,6 @@ class TelaSincronizacao(QWidget):
     #   Etapa 1b — Sincroniza os demais usuários locais ainda não enviados.
     #   Etapa 2  — Envia os cadastros com sincronizado=0.
     #   Etapa 3  — Copia arquivos físicos para a pasta de rede e registra no PG.
-    # =========================================================================
     def enviar_dados(self):
         self.log("--- INICIANDO ENVIO DE DADOS (UPLOAD) ---")
 
@@ -313,11 +288,9 @@ class TelaSincronizacao(QWidget):
             conn_sl = sqlite3.connect('ecosol_local.db')  # Conexão com o SQLite local
             cursor_sl = conn_sl.cursor()
 
-            # -----------------------------------------------------------------
             # ETAPA 1: Usuários responsáveis por cadastros pendentes
             # O Postgres tem FK de cadastros_ecosol.responsavel_id → usuarios.id
             # Por isso o usuário precisa existir no PG ANTES do cadastro ser inserido.
-            # -----------------------------------------------------------------
             self.log("Verificando usuários responsáveis por cadastros pendentes...")
 
             # Busca somente os usuários que são referenciados por cadastros ainda não enviados
@@ -331,13 +304,20 @@ class TelaSincronizacao(QWidget):
 
             for u in responsaveis_necessarios:
                 try:
-                    # ON CONFLICT DO NOTHING = UPSERT seguro: insere se não existe, ignora se já existe
+                    # ON CONFLICT (login) DO UPDATE: o "login" é a identidade real do usuário
+                    # entre instalações diferentes (cada instalação local gera seu próprio "id"
+                    # UUID para o admin padrão, mas o login "admin" é sempre o mesmo). Por isso
+                    # o conflito é resolvido pelo login, não pelo id — e ao colidir, ATUALIZA os
+                    # dados no servidor (nome/senha/nível) em vez de simplesmente ignorar.
                     cursor_pg.execute("""
                         INSERT INTO usuarios (id, nome, login, senha_hash, nivel_acesso)
                         VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (id) DO NOTHING
+                        ON CONFLICT (login) DO UPDATE SET
+                            nome = EXCLUDED.nome,
+                            senha_hash = EXCLUDED.senha_hash,
+                            nivel_acesso = EXCLUDED.nivel_acesso
                     """, (u[0], u[1] or u[2], u[2], u[3], u[4]))
-                    self.log(f"Usuário responsável '{u[2]}' garantido no servidor.")
+                    self.log(f"Usuário responsável '{u[2]}' garantido/atualizado no servidor.")
                 except Exception as e:
                     self.log(f"Aviso ao garantir usuário responsável '{u[2]}': {e}")
 
@@ -346,10 +326,8 @@ class TelaSincronizacao(QWidget):
             conn_pg.commit()
             self.log("Usuários responsáveis confirmados no servidor.")
 
-            # -----------------------------------------------------------------
             # ETAPA 1b: Demais usuários locais ainda não sincronizados
             # Cobre usuários criados localmente que não têm cadastros associados
-            # -----------------------------------------------------------------
             cursor_sl.execute("""
                 SELECT id, nome, login, senha_hash, nivel_acesso
                 FROM usuarios
@@ -359,10 +337,15 @@ class TelaSincronizacao(QWidget):
 
             for u in usuarios_pendentes:
                 try:
+                    # Mesma lógica da Etapa 1: conflito resolvido pelo login (identidade real),
+                    # atualizando os dados no servidor em vez de ignorar quando já existir.
                     cursor_pg.execute("""
                         INSERT INTO usuarios (id, nome, login, senha_hash, nivel_acesso)
                         VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (id) DO NOTHING
+                        ON CONFLICT (login) DO UPDATE SET
+                            nome = EXCLUDED.nome,
+                            senha_hash = EXCLUDED.senha_hash,
+                            nivel_acesso = EXCLUDED.nivel_acesso
                     """, (u[0], u[1] or u[2], u[2], u[3], u[4]))
                     # Marca como sincronizado no SQLite local para não reenviar
                     cursor_sl.execute("UPDATE usuarios SET sincronizado = 1 WHERE id = ?", (u[0],))
@@ -373,11 +356,9 @@ class TelaSincronizacao(QWidget):
             conn_pg.commit()   # Confirma inserções de usuários no Postgres
             conn_sl.commit()   # Confirma marcações de sincronizado no SQLite
 
-            # -----------------------------------------------------------------
             # ETAPA 2: Cadastros pendentes (sincronizado = 0)
             # Monta o INSERT dinamicamente a partir das colunas da tabela,
             # excluindo a coluna 'sincronizado' que é exclusiva do SQLite.
-            # -----------------------------------------------------------------
             cursor_sl.execute("SELECT * FROM cadastros_ecosol WHERE sincronizado = 0")
             cadastros_pendentes = cursor_sl.fetchall()
 
@@ -415,11 +396,9 @@ class TelaSincronizacao(QWidget):
                 conn_sl.commit()  # Confirma todas as marcações de sincronizado no SQLite
                 self.log(f"{cadastros_enviados} de {len(cadastros_pendentes)} cadastro(s) enviados.")
 
-            # -----------------------------------------------------------------
             # ETAPA 3: Arquivos físicos (sincronizado = 0)
             # Se a pasta de rede estiver preenchida e o arquivo existir localmente,
             # copia para a rede. O caminho final (rede ou local) é registrado no PG.
-            # -----------------------------------------------------------------
             pasta_rede = self.input_pasta_rede.text().strip()
             cursor_sl.execute(
                 "SELECT id, cadastro_id, caminho_arquivo FROM arquivos_anexos WHERE sincronizado = 0"
@@ -471,13 +450,10 @@ class TelaSincronizacao(QWidget):
             self.log(f"ERRO CRÍTICO NO UPLOAD: {str(e)}")
             QMessageBox.critical(self, "Erro", f"A sincronização falhou:\n{str(e)}")
 
-
-    # =========================================================================
     # baixar_dados
     # Busca no PostgreSQL todos os usuários e cadastros e insere no SQLite
     # local com INSERT OR IGNORE (não sobrescreve registros já existentes).
     # Marca os registros baixados com sincronizado=1 para evitar reenvio.
-    # =========================================================================
     def baixar_dados(self):
         self.log("--- INICIANDO ATUALIZAÇÃO LOCAL (DOWNLOAD) ---")
         try:
@@ -487,22 +463,45 @@ class TelaSincronizacao(QWidget):
             conn_sl = sqlite3.connect('ecosol_local.db')  # Abre o banco local
             cursor_sl = conn_sl.cursor()
 
-            # -----------------------------------------------------------------
-            # Baixa e insere usuários do servidor que não existem localmente
-            # INSERT OR IGNORE garante que usuários locais não sejam sobrescritos
-            # -----------------------------------------------------------------
+            # Baixa e insere/atualiza usuários do servidor no banco local.
+            # Conflito resolvido pelo "login" (mesma lógica do upload): se o login
+            # já existir localmente, ATUALIZA nome/senha/nível com o que está no
+            # servidor (fonte de verdade). Se não existir, insere como novo.
+            # Loga explicitamente quantos foram novos e quantos foram atualizados,
+            # já que antes o INSERT OR IGNORE escondia silenciosamente os conflitos.
             self.log("Baixando usuários do servidor...")
             cursor_pg.execute("SELECT id, nome, login, senha_hash, nivel_acesso FROM usuarios")
-            for u in cursor_pg.fetchall():
+            usuarios_servidor = cursor_pg.fetchall()
+
+            novos_usuarios = 0
+            atualizados_usuarios = 0
+
+            for u in usuarios_servidor:
+                # Verifica antes se o login já existe localmente, só para fins de log
+                cursor_sl.execute("SELECT id FROM usuarios WHERE login = ?", (u[2],))
+                ja_existia = cursor_sl.fetchone() is not None
+
                 cursor_sl.execute("""
-                    INSERT OR IGNORE INTO usuarios (id, nome, login, senha_hash, nivel_acesso, sincronizado)
+                    INSERT INTO usuarios (id, nome, login, senha_hash, nivel_acesso, sincronizado)
                     VALUES (?, ?, ?, ?, ?, 1)
+                    ON CONFLICT(login) DO UPDATE SET
+                        nome = excluded.nome,
+                        senha_hash = excluded.senha_hash,
+                        nivel_acesso = excluded.nivel_acesso,
+                        sincronizado = 1
                 """, (u[0], u[1], u[2], u[3], u[4]))  # sincronizado=1: já veio do servidor
 
-            # -----------------------------------------------------------------
+                if ja_existia:
+                    atualizados_usuarios += 1
+                    self.log(f"Usuário '{u[2]}' já existia localmente — dados atualizados.")
+                else:
+                    novos_usuarios += 1
+                    self.log(f"Usuário '{u[2]}' novo — inserido localmente.")
+
+            self.log(f"Usuários: {novos_usuarios} novo(s), {atualizados_usuarios} atualizado(s).")
+
             # Baixa cadastros do servidor e insere localmente
             # Colunas são lidas dinamicamente do cursor para robustez
-            # -----------------------------------------------------------------
             self.log("Baixando cadastros da base central...")
             cursor_pg.execute("SELECT * FROM cadastros_ecosol")
             colunas_pg = [desc[0] for desc in cursor_pg.description]  # Nomes das colunas do PG

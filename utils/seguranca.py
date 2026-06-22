@@ -1,23 +1,15 @@
-# =============================================================================
 # seguranca.py
 # Módulo central de controle de acesso do sistema ECOSOL AM.
-#
 # Responsabilidades:
 #   1. Definir as PERMISSÕES de cada cargo (quais telas pode acessar e se pode
 #      interagir ou só visualizar)
 #   2. Fornecer funções auxiliares que o main.py usa para aplicar as regras
 #      em tempo de execução (mostrar/ocultar botões, bloquear widgets)
-#
 # Cargos disponíveis (vêm do banco como string em minúsculo):
 #   "admin"       → acesso total, sem restrições
 #   "operador"    → acessa Novo Cadastro e Cadastros (interação completa)
 #   "visualizador"→ acessa Novo Cadastro, Cadastros e Relatórios, mas somente
 #                   em modo leitura (widgets desabilitados, sem salvar/editar)
-#
-# Como usar no main.py:
-#   from utils.seguranca import Seguranca
-#   Seguranca.configurar_painel(painel, nivel_acesso)
-# =============================================================================
 
 from PyQt6.QtWidgets import (
     QWidget,       # Classe base de todos os widgets — usada para varredura recursiva
@@ -30,10 +22,7 @@ from PyQt6.QtWidgets import (
     QTextEdit,     # Áreas de texto que serão bloqueadas no modo visualizador
 )
 
-
-# =============================================================================
 # MAPA DE PERMISSÕES POR CARGO
-#
 # Estrutura de cada cargo:
 #   "telas_visiveis"   → lista de nomes de atributos do PainelSistema que
 #                        correspondem aos botões do menu lateral que o cargo
@@ -41,16 +30,10 @@ from PyQt6.QtWidgets import (
 #   "telas_somente_leitura" → lista de nomes de atributos do PainelSistema
 #                        que correspondem às telas carregadas em modo leitura
 #                        (widgets internos desabilitados para interação)
-#
-# Nomes usados aqui devem bater EXATAMENTE com os atributos do PainelSistema
-# em main.py (self.btn_cadastro, self.tela_novo_cadastro, etc.)
-# =============================================================================
-PERMISSOES = {
 
-    # -------------------------------------------------------------------------
+PERMISSOES = {
     # ADMIN — acesso irrestrito a tudo
     # Todos os botões do menu ficam visíveis e nenhuma tela é bloqueada.
-    # -------------------------------------------------------------------------
     "admin": {
         "telas_visiveis": [
             "btn_cadastro",        # Botão "Novo Cadastro" no menu lateral
@@ -62,10 +45,8 @@ PERMISSOES = {
         "telas_somente_leitura": [],  # Nenhuma tela é bloqueada para o admin
     },
 
-    # -------------------------------------------------------------------------
     # OPERADOR — pode interagir com Novo Cadastro e Cadastros
     # Não vê Sincronização, Relatórios nem Gerenciar Usuários.
-    # -------------------------------------------------------------------------
     "operador": {
         "telas_visiveis": [
             "btn_cadastro",    # Botão "Novo Cadastro" no menu lateral
@@ -74,10 +55,8 @@ PERMISSOES = {
         "telas_somente_leitura": [],  # As telas visíveis são totalmente interativas
     },
 
-    # -------------------------------------------------------------------------
     # VISUALIZADOR — vê Novo Cadastro, Cadastros e Relatórios, mas somente leitura
     # Pode navegar pelas telas, mas todos os campos e botões ficam desabilitados.
-    # -------------------------------------------------------------------------
     "visualizador": {
         "telas_visiveis": [
             "btn_cadastro",    # Botão "Novo Cadastro" no menu (tela em modo leitura)
@@ -96,31 +75,22 @@ PERMISSOES = {
 # Segurança defensiva: se vier um cargo desconhecido, bloqueia tudo.
 CARGO_PADRAO_DESCONHECIDO = "visualizador"
 
-
-# =============================================================================
 # Seguranca
 # Classe utilitária com métodos estáticos — não precisa ser instanciada.
 # Todos os métodos são chamados diretamente: Seguranca.configurar_painel(...)
-# =============================================================================
 class Seguranca:
-
-    # =========================================================================
     # configurar_painel
     # Ponto de entrada principal. Chamado pelo PainelSistema em main.py logo
     # após a construção da interface, passando a si mesmo (self) e o nível.
-    #
     # Parâmetros:
     #   painel        → instância do PainelSistema (tem os atributos btn_*, tela_*)
     #   nivel_acesso  → string do banco: "admin", "operador" ou "visualizador"
-    #
     # O que faz:
     #   1. Resolve o cargo (normaliza para minúsculo, usa padrão se desconhecido)
     #   2. Aplica visibilidade dos botões do menu lateral
     #   3. Aplica bloqueio de interação nas telas de somente leitura
-    # =========================================================================
     @staticmethod
     def configurar_painel(painel, nivel_acesso: str):
-
         # Normaliza o nível para minúsculo para evitar erros com "Admin", "ADMIN" etc.
         nivel = nivel_acesso.strip().lower() if nivel_acesso else CARGO_PADRAO_DESCONHECIDO
 
@@ -140,18 +110,14 @@ class Seguranca:
         # --- Passo 3: Garante que a primeira tela visível esteja selecionada ---
         Seguranca._navegar_para_primeira_tela(painel, regras["telas_visiveis"])
 
-    # =========================================================================
     # _aplicar_visibilidade_menu
     # Percorre TODOS os botões do menu lateral e define quais ficam visíveis.
     # Botões não listados em "telas_visiveis" são ocultados (setVisible(False)).
-    #
     # Parâmetros:
     #   painel          → instância do PainelSistema
     #   botoes_visiveis → lista de nomes de atributos dos botões permitidos
-    # =========================================================================
     @staticmethod
     def _aplicar_visibilidade_menu(painel, botoes_visiveis: list):
-
         # Lista completa de todos os botões do menu que existem no PainelSistema.
         # Se um botão for adicionado ao main.py no futuro, deve ser incluído aqui também.
         todos_os_botoes_menu = [
@@ -174,18 +140,14 @@ class Seguranca:
             # Exibe o botão se estiver na lista de permitidos; oculta caso contrário
             botao.setVisible(nome_btn in botoes_visiveis)
 
-    # =========================================================================
     # _aplicar_somente_leitura
     # Para cada tela listada em "telas_somente_leitura", percorre recursivamente
     # todos os widgets filhos e desabilita os interativos (inputs, combos, botões).
-    #
     # Widgets QLabel são mantidos habilitados para que o texto permaneça legível.
     # Widgets de layout (QFrame, QGroupBox) não são tocados — só os interativos.
-    #
     # Parâmetros:
     #   painel      → instância do PainelSistema
     #   telas_sl    → lista de nomes de atributos das telas a bloquear
-    # =========================================================================
     @staticmethod
     def _aplicar_somente_leitura(painel, telas_sl: list):
 
@@ -223,19 +185,16 @@ class Seguranca:
             if isinstance(tela, WIDGETS_INTERATIVOS):
                 tela.setEnabled(False)
 
-    # =========================================================================
     # _navegar_para_primeira_tela
     # Após configurar a visibilidade, garante que o conteúdo exibido seja
     # a primeira tela que o cargo tem permissão de acessar.
     # Evita que o sistema fique mostrando uma tela "em branco" ou bloqueada.
-    #
     # Mapeamento entre nome do botão e nome do atributo da tela correspondente:
     #   btn_cadastro     → tela_novo_cadastro
     #   btn_cadastros    → tela_cadastros
     #   btn_sincronizacao→ tela_sincronizacao
     #   btn_relatorios   → tela_relatorios
     #   btn_usuarios     → tela_usuarios
-    # =========================================================================
     @staticmethod
     def _navegar_para_primeira_tela(painel, botoes_visiveis: list):
 
@@ -263,23 +222,17 @@ class Seguranca:
                 painel.conteudo_stack.setCurrentWidget(tela)
                 return  # Para após definir a primeira tela — não continua o loop
 
-    # =========================================================================
     # tem_permissao
     # Função auxiliar pública para verificações pontuais de permissão em
     # qualquer parte do código — ex: habilitar/desabilitar um botão específico.
-    #
     # Uso:
     #   if Seguranca.tem_permissao("operador", "btn_cadastro"):
-    #       ...
-    #
     # Parâmetros:
     #   nivel_acesso → nível do usuário logado
     #   recurso      → nome do botão ou tela a verificar
-    #
     # Retorna:
     #   True  → o cargo tem permissão de ver/acessar o recurso
     #   False → o cargo não tem permissão
-    # =========================================================================
     @staticmethod
     def tem_permissao(nivel_acesso: str, recurso: str) -> bool:
 
@@ -293,23 +246,17 @@ class Seguranca:
         # Verifica se o recurso está na lista de telas visíveis do cargo
         return recurso in PERMISSOES[nivel]["telas_visiveis"]
 
-    # =========================================================================
     # eh_somente_leitura
     # Verifica se uma tela específica deve ser exibida em modo somente leitura
     # para o cargo informado.
-    #
     # Uso:
     #   if Seguranca.eh_somente_leitura("visualizador", "tela_novo_cadastro"):
-    #       ...
-    #
     # Parâmetros:
     #   nivel_acesso → nível do usuário logado
     #   nome_tela    → nome do atributo da tela a verificar
-    #
     # Retorna:
     #   True  → a tela deve ser bloqueada (somente leitura) para este cargo
     #   False → a tela é totalmente interativa para este cargo
-    # =========================================================================
     @staticmethod
     def eh_somente_leitura(nivel_acesso: str, nome_tela: str) -> bool:
 
