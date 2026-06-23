@@ -1,5 +1,7 @@
 # form_ecosol.py
 # Tela principal de cadastro do sistema ECOSOL.
+# As cores são carregadas dinamicamente do arquivo .env via os.getenv(),
+
 import os
 import shutil
 import sqlite3
@@ -19,12 +21,12 @@ COR_PRIMARIA        = os.getenv("COR_PRIMARIA",       "#003366")  # Azul escuro 
 COR_PRIMARIA_HOVER  = os.getenv("COR_PRIMARIA_HOVER", "#004080")  # Azul hover dos botões primários
 COR_SECUNDARIA      = os.getenv("COR_SECUNDARIA",     "#17a2b8")  # Azul ciano — botão "Anexar"
 COR_ALERTA          = os.getenv("COR_ALERTA",         "#dc3545")  # Vermelho — botão "Gerar PDF"
-COR_FUNDO_CLARO     = os.getenv("COR_FUNDO_CLARO",    "#f8f9fa")  # Cinza muito claro — fundo do formulário
+COR_FUNDO_CLARO     = os.getenv("COR_FUNDO_CLARO",   "#f8f9fa")  # Cinza muito claro — fundo do formulário
 COR_TEXTO_ESCURO    = os.getenv("COR_TEXTO_ESCURO",   "#212529")  # Quase preto — texto dos labels
 COR_TEXTO_CLARO     = os.getenv("COR_TEXTO_CLARO",    "#ffffff")  # Branco — texto sobre fundo colorido
 COR_BORDA           = os.getenv("COR_BORDA",          "#ced4da")  # Cinza suave — bordas dos inputs
-COR_SALVAR          = "#28a745"                                   # Verde fixo — botão Salvar (sem variável no .env)
-COR_SALVAR_HOVER    = "#218838"                                   # Verde escuro — hover do botão Salvar
+COR_SALVAR          = "#28a745"                                    # Verde fixo — botão Salvar (sem variável no .env)
+COR_SALVAR_HOVER    = "#218838"                                    # Verde escuro — hover do botão Salvar
 
 # NonScrollComboBox
 # Subclasse de QComboBox que ignora o scroll do mouse.
@@ -48,8 +50,10 @@ class TelaNovoCadastro(QWidget):
         self.usuario_logado_id = usuario_logado_id    # ID do usuário logado, usado como FK no banco
         self.arquivos_anexados = []                   # Lista de caminhos dos arquivos a serem anexados
 
-        # ESTADO DE ATUALIZAÇÃO CADASTRAL (histórico de versões)
+        # ----- ESTADO DE ATUALIZAÇÃO CADASTRAL (histórico de versões) -----
         # grupo_id_atual: identifica a "pessoa/empreendimento" entre várias versões.
+        #   - None enquanto não detectamos nenhum cadastro anterior (será um grupo novo).
+        #   - Preenchido quando o operador confirma carregar um cadastro já existente.
         self.grupo_id_atual = None
         # Evita que o popup de "já existe" apareça de novo enquanto os dados do
         # próprio cadastro carregado ainda estão preenchidos no formulário.
@@ -201,7 +205,7 @@ class TelaNovoCadastro(QWidget):
         self.input_cor_raca = QLineEdit()
         self.input_cor_raca.setPlaceholderText("Digite a cor/raça")
 
-        # PAINEL DE SEXO (RadioButtons com fundo transparente) -----
+        # ----- PAINEL DE SEXO (RadioButtons com fundo transparente) -----
         self.bg_sexo = QButtonGroup()
         widget_sexo = QWidget()
         widget_sexo.setStyleSheet("background: transparent;")  # Evita o fundo cinza padrão do QWidget
@@ -270,7 +274,7 @@ class TelaNovoCadastro(QWidget):
         layout_caract.setColumnStretch(1, 1)
         layout_caract.setColumnStretch(3, 1)
         
-        # Forma de Organização ECOSOL
+        # ----- Forma de Organização ECOSOL -----
         # NonScrollComboBox impede troca acidental de valor com scroll do mouse
         self.input_forma_ecosol = NonScrollComboBox()
         self.input_forma_ecosol.addItems(["Cooperativa", "Associação", "Grupo Informal", "Outros"])
@@ -287,7 +291,7 @@ class TelaNovoCadastro(QWidget):
         lay_forma_ecosol.addWidget(self.input_forma_ecosol, 2)   # Combo ocupa 2/3 do espaço
         lay_forma_ecosol.addWidget(self.input_outros_forma_ecosol, 1)  # Campo "Outros" ocupa 1/3
 
-        # Forma de Organização do Empreendimento
+        # ----- Forma de Organização do Empreendimento -----
         self.input_forma_emp = NonScrollComboBox()
         self.input_forma_emp.addItems(["MEI", "Autônomo", "Outros"])
         self.input_forma_emp.setPlaceholderText("Selecione a Forma Org. Emp...")
@@ -302,7 +306,7 @@ class TelaNovoCadastro(QWidget):
         lay_forma_emp.addWidget(self.input_forma_emp, 2)
         lay_forma_emp.addWidget(self.input_outros_forma_emp, 1)
 
-        # Segmento do Empreendimento
+        # ----- Segmento do Empreendimento -----
         self.input_segmento = NonScrollComboBox()
         self.input_segmento.addItems(["Comércio", "Serviços", "Artesanato", "Indústria", "Outros"])
         self.input_segmento.setPlaceholderText("Selecione o Segmento...")
@@ -317,7 +321,7 @@ class TelaNovoCadastro(QWidget):
         lay_segmento.addWidget(self.input_segmento, 2)
         lay_segmento.addWidget(self.input_outros_segmento, 1)
 
-        # Campos de texto livres
+        # ----- Campos de texto livres -----
         self.input_materia_prima = QLineEdit()
         self.input_materia_prima.setPlaceholderText("Digite as matérias-primas")
         self.input_local_prod = QLineEdit()
@@ -325,7 +329,7 @@ class TelaNovoCadastro(QWidget):
         self.input_onde_comerc = QLineEdit()
         self.input_onde_comerc.setPlaceholderText("Onde comercializa?")
 
-        # Beneficiários: 4 campos numéricos lado a lado
+        # ----- Beneficiários: 4 campos numéricos lado a lado -----
         layout_benef = QHBoxLayout()
         self.in_dir_m = QLineEdit(); self.in_dir_m.setPlaceholderText("Diretos Masculino")
         self.in_dir_f = QLineEdit(); self.in_dir_f.setPlaceholderText("Diretos Feminino")
@@ -371,7 +375,7 @@ class TelaNovoCadastro(QWidget):
         layout_caract.addWidget(QLabel("7.1 - PIX?:"), 4, 2)
         layout_caract.addWidget(self.input_pix, 4, 3)
 
-        # Grupos de Checkboxes (múltipla escolha)
+        # ----- Grupos de Checkboxes (múltipla escolha) -----
         # criar_grupo_checkboxes retorna a lista de QCheckBox para leitura posterior
         self.checks_classificacao = self.criar_grupo_checkboxes([
             "Agricultura Familiar", "Artistas", "Catadores", "Técnicos", 
@@ -414,7 +418,7 @@ class TelaNovoCadastro(QWidget):
         self.input_forma_contrib.setPlaceholderText("Selecione a Forma...")
         self.input_forma_contrib.setCurrentIndex(-1)
 
-        # Renda Preponderante (com campo "Outros" dinâmico)
+        # ----- Renda Preponderante (com campo "Outros" dinâmico) -----
         self.input_renda = NonScrollComboBox()
         self.input_renda.addItems(["Renda individual/familiar", "Complemento atividades", "Complemento governamental", "Aposentadoria", "Outros"])
         self.input_renda.setPlaceholderText("Selecione a Renda...")
@@ -429,7 +433,7 @@ class TelaNovoCadastro(QWidget):
         lay_renda.addWidget(self.input_renda, 2)
         lay_renda.addWidget(self.input_outros_renda, 1)
 
-        # Para quem comercializa (com campo "Outros" dinâmico)
+        # ----- Para quem comercializa (com campo "Outros" dinâmico) -----
         self.input_para_quem = NonScrollComboBox()
         self.input_para_quem.addItems(["Consumidor final", "Atacadistas", "Governo", "Empresas privadas", "Outros"])
         self.input_para_quem.setPlaceholderText("Selecione o Destino...")
@@ -489,7 +493,7 @@ class TelaNovoCadastro(QWidget):
         self.input_obs = QLineEdit()
         self.input_obs.setPlaceholderText("Digite observações adicionais")
 
-        # Local do Cadastro (com campo "Outros" dinâmico)
+        # ----- Local do Cadastro (com campo "Outros" dinâmico) -----
         self.input_local = NonScrollComboBox()
         self.input_local.addItems(["Manaus", "Itacoatiara", "Parintins", "Tefé", "Outros"])
         self.input_local.setPlaceholderText("Selecione o Local...")
@@ -504,14 +508,14 @@ class TelaNovoCadastro(QWidget):
         lay_local.addWidget(self.input_local, 2)
         lay_local.addWidget(self.input_outros_local, 1)
 
-        # Seletor de Data do Formulário
+        # ----- Seletor de Data do Formulário -----
         self.input_data_form = QDateEdit()
         self.input_data_form.setCalendarPopup(True)          # Abre calendário ao clicar
         self.input_data_form.setDate(QDate.currentDate())    # Padrão: data de hoje
         self.input_data_form.setDisplayFormat("dd/MM/yyyy")  # Formato visual: dia/mês/ano
         self.input_data_form.setStyleSheet("QDateEdit { min-width: 160px; padding: 5px; }")
 
-        # Botão e indicador de arquivos anexados
+        # ----- Botão e indicador de arquivos anexados -----
         # Usa COR_SECUNDARIA do .env para o botão de anexar (azul ciano)
         self.btn_anexar = QPushButton("Anexar RG, CPF e Comprovante")
         self.btn_anexar.setStyleSheet(f"""
@@ -684,13 +688,16 @@ class TelaNovoCadastro(QWidget):
             self.arquivos_anexados.extend(arquivos)  # Adiciona sem sobrescrever seleções anteriores
             self.lbl_arquivos.setText(f"{len(self.arquivos_anexados)} arquivo(s) selecionado(s).")
 
+    # =========================================================================
     # verificar_cadastro_existente
     # Chamado quando o operador termina de digitar o CPF ou o CNPJ.
     # Consulta o banco local: se já existir algum cadastro com esse documento,
     # pergunta se o operador quer carregar os dados da versão mais recente
     # (fluxo de ATUALIZAÇÃO CADASTRAL) em vez de preencher tudo do zero.
+    #
     # Parâmetros:
-    # campo → "cpf" ou "cnpj", indica qual dos dois campos disparou a checagem
+    #   campo → "cpf" ou "cnpj", indica qual dos dois campos disparou a checagem
+    # =========================================================================
     def verificar_cadastro_existente(self, campo):
         # Enquanto os dados de um cadastro carregado ainda estão no formulário,
         # não repete a pergunta (evita popup repetido sem o operador ter mudado nada)
@@ -750,11 +757,13 @@ class TelaNovoCadastro(QWidget):
         if resposta == QMessageBox.StandardButton.Yes:
             self.carregar_dados_cadastro(grupo_id_encontrado)
 
+    # =========================================================================
     # carregar_dados_cadastro
     # Busca a versão mais recente do grupo_id informado e preenche TODOS os
     # campos do formulário com esses dados, entrando em modo "atualização
     # cadastral": ao salvar, o novo registro herdará o mesmo grupo_id, mantendo
     # o histórico de versões da mesma pessoa/empreendimento.
+    # =========================================================================
     def carregar_dados_cadastro(self, grupo_id):
         try:
             conn = sqlite3.connect('ecosol_local.db')
@@ -781,12 +790,12 @@ class TelaNovoCadastro(QWidget):
         # já que vamos justamente reescrever o CPF/CNPJ que disparou a busca
         self._verificacao_duplicidade_suspensa = True
 
-        # Tipo de Cadastro (radio + campo "Outros")
+        # ----- Tipo de Cadastro (radio + campo "Outros") -----
         self._marcar_radio_com_outros(
             self.radios_tipo, self.input_outros_tipo, dados.get("tipo_cadastro") or ""
         )
 
-        # Campos de texto simples
+        # ----- Campos de texto simples -----
         self.input_razao.setText(dados.get("razao_social_nome") or "")
         self.input_endereco.setText(dados.get("endereco") or "")
         self.input_email.setText(dados.get("email") or "")
@@ -799,19 +808,19 @@ class TelaNovoCadastro(QWidget):
         self.input_produtos.setText(dados.get("produtos_comercializados") or "")
         self.input_obs.setText(dados.get("obs") or "")
 
-        # Campos com máscara (CEP, CNPJ, CPF, telefone)
+        # ----- Campos com máscara (CEP, CNPJ, CPF, telefone) -----
         # setText respeita a máscara já configurada nesses campos automaticamente
         self.input_cep.setText(dados.get("cep") or "")
         self.input_cnpj.setText(dados.get("cnpj") or "")
         self.input_cpf.setText(dados.get("cpf") or "")
         self.input_telefone.setText(dados.get("telefone") or "")
 
-        # Sexo (radio + campo "Outros")
+        # ----- Sexo (radio + campo "Outros") -----
         self._marcar_radio_com_outros(
             self.radios_sexo, self.input_outros_sexo, dados.get("sexo") or ""
         )
 
-        # Combos com campo "Outros" dinâmico
+        # ----- Combos com campo "Outros" dinâmico -----
         self._selecionar_combo_com_outros(
             self.input_forma_ecosol, self.input_outros_forma_ecosol, dados.get("forma_organizacao_ecosol") or ""
         )
@@ -831,7 +840,7 @@ class TelaNovoCadastro(QWidget):
             self.input_local, self.input_outros_local, dados.get("local_cadastro") or ""
         )
 
-        # Combos simples (Sim/Não e demais, sem campo "Outros")
+        # ----- Combos simples (Sim/Não e demais, sem campo "Outros") -----
         self._selecionar_combo_simples(self.input_cartao, dados.get("maquina_cartao") or "")
         self._selecionar_combo_simples(self.input_pix, dados.get("pix") or "")
         self._selecionar_combo_simples(self.input_pagam_taxa, dados.get("pagam_taxa") or "")
@@ -839,18 +848,18 @@ class TelaNovoCadastro(QWidget):
         self._selecionar_combo_simples(self.input_dificuldade, dados.get("dificuldade_comercializacao") or "")
         self._selecionar_combo_simples(self.input_resp_vendas, dados.get("responsavel_vendas") or "")
 
-        # Beneficiários (numéricos)
+        # ----- Beneficiários (numéricos) -----
         self.in_dir_m.setText(str(dados.get("beneficiarios_diretos_m") or 0))
         self.in_dir_f.setText(str(dados.get("beneficiarios_diretos_f") or 0))
         self.in_ind_m.setText(str(dados.get("beneficiarios_indiretos_m") or 0))
         self.in_ind_f.setText(str(dados.get("beneficiarios_indiretos_f") or 0))
 
-        # Grupos de checkboxes (classificação, motivo, formas de comercialização)
+        # ----- Grupos de checkboxes (classificação, motivo, formas de comercialização) -----
         self._marcar_checkboxes_csv(self.checks_classificacao, dados.get("classificacao_social") or "")
         self._marcar_checkboxes_csv(self.checks_motivo, dados.get("motivo_criacao") or "")
         self._marcar_checkboxes_csv(self.checks_formas_comerc, dados.get("formas_comercializacao") or "")
 
-        # Data do formulário
+        # ----- Data do formulário -----
         data_formulario_str = dados.get("data_formulario")
         if data_formulario_str:
             self.input_data_form.setDate(QDate.fromString(data_formulario_str, "yyyy-MM-dd"))
@@ -867,10 +876,12 @@ class TelaNovoCadastro(QWidget):
             "Edite os campos necessários e clique em Salvar para registrar a ATUALIZAÇÃO CADASTRAL."
         )
 
+    # =========================================================================
     # _marcar_radio_com_outros
     # Marca o QRadioButton cujo texto corresponde ao valor salvo. Se o valor
     # salvo começa com "Outros: ", marca o radio "Outros" e preenche o campo
     # de texto livre associado com o restante do texto.
+    # =========================================================================
     def _marcar_radio_com_outros(self, dict_radios, campo_outros, valor_salvo):
         if not valor_salvo:
             return
@@ -880,10 +891,12 @@ class TelaNovoCadastro(QWidget):
         elif valor_salvo in dict_radios:
             dict_radios[valor_salvo].setChecked(True)
 
+    # =========================================================================
     # _selecionar_combo_com_outros
     # Seleciona no combo o item cujo texto corresponde ao valor salvo. Se o
     # valor salvo começa com "Outros: ", seleciona "Outros" no combo e
     # preenche o campo de texto livre associado com o restante do texto.
+    # =========================================================================
     def _selecionar_combo_com_outros(self, combo, campo_outros, valor_salvo):
         if not valor_salvo:
             combo.setCurrentIndex(-1)
@@ -897,17 +910,21 @@ class TelaNovoCadastro(QWidget):
             indice = combo.findText(valor_salvo)
             combo.setCurrentIndex(indice)  # findText retorna -1 se não achar (mantém placeholder)
 
+    # =========================================================================
     # _selecionar_combo_simples
     # Seleciona no combo o item cujo texto é exatamente igual ao valor salvo.
     # Usado para combos sem opção "Outros" (Sim/Não, formas de contribuição etc).
+    # =========================================================================
     def _selecionar_combo_simples(self, combo, valor_salvo):
         indice = combo.findText(valor_salvo) if valor_salvo else -1
         combo.setCurrentIndex(indice)
 
+    # =========================================================================
     # _marcar_checkboxes_csv
     # Recebe a string CSV salva no banco (ex: "Cooperativa, Outros: Bazar") e
     # marca os QCheckBox correspondentes na lista. Trata o caso especial do
     # item "Outros", preenchendo seu campo de texto livre associado.
+    # =========================================================================
     def _marcar_checkboxes_csv(self, lista_checkboxes, valor_csv):
         if not valor_csv:
             return
@@ -927,6 +944,111 @@ class TelaNovoCadastro(QWidget):
             elif texto_cb in itens_salvos:
                 cb.setChecked(True)
 
+    # =========================================================================
+    # _verificar_campos_vazios
+    # Monta a lista de campos não preenchidos, agrupados por seção do
+    # formulário, para exibir no popup de aviso antes de salvar. Como quase
+    # todos os campos são opcionais, isso serve apenas como um alerta — o
+    # operador decide se quer voltar e completar ou salvar assim mesmo.
+    #
+    # Recebe os valores já lidos e normalizados em salvar_cadastro (evita ler
+    # os widgets de novo e duplicar a lógica de limpeza de máscara/"Outros").
+    # Retorna uma lista de tuplas (nome_secao, [lista_de_campos_vazios]),
+    # omitindo seções sem nenhum campo vazio.
+    # =========================================================================
+    def _verificar_campos_vazios(self, endereco, email, rg, cep, cnpj, cpf, telefone,
+                                  sexo, val_forma_ecosol, val_forma_emp, val_segmento,
+                                  val_renda, val_para_quem, val_local, grid_class_social,
+                                  grid_motivos, grid_formas_comerc):
+
+        # Estrutura: (nome_da_seção, [(rótulo_amigável, está_vazio?), ...])
+        # está_vazio? já vem calculado como booleano para cada campo.
+        estrutura = [
+            ("Identificação do Empreendimento / Representante", [
+                ("Endereço",              not endereco),
+                ("CEP",                   not cep),
+                ("E-mail / Site",         not email),
+                ("CNPJ",                  not cnpj),
+                ("CPF",                   not cpf),
+                ("RG",                    not rg),
+                ("Representante Legal",   not self.input_rep_legal.text().strip()),
+                ("Telefone",              not telefone),
+                ("Cor/Raça",              not self.input_cor_raca.text().strip()),
+                ("Sexo",                  not sexo),
+            ]),
+            ("Características Gerais do Empreendimento", [
+                ("Forma Org. ECOSOL",         not val_forma_ecosol),
+                ("Forma Org. Empreendimento", not val_forma_emp),
+                ("Segmento",                  not val_segmento),
+                ("Matéria-Prima",             not self.input_materia_prima.text().strip()),
+                ("Local de Produção",         not self.input_local_prod.text().strip()),
+                ("Onde Comercializa",         not self.input_onde_comerc.text().strip()),
+                ("Beneficiários Diretos (M)",   not self.in_dir_m.text().strip()),
+                ("Beneficiários Diretos (F)",   not self.in_dir_f.text().strip()),
+                ("Beneficiários Indiretos (M)", not self.in_ind_m.text().strip()),
+                ("Beneficiários Indiretos (F)", not self.in_ind_f.text().strip()),
+                ("Possui Máquina de Cartão",  self.input_cartao.currentIndex() == -1),
+                ("Possui PIX",                self.input_pix.currentIndex() == -1),
+                ("Classificação Social",      not grid_class_social),
+                ("Motivo de Criação",         not grid_motivos),
+            ]),
+            ("Atividade Econômica e Situação de Trabalho", [
+                ("Formas de Comercialização",       not grid_formas_comerc),
+                ("Produtos Comercializados",        not self.input_produtos.text().strip()),
+                ("Pagam Taxa/Contribuição",         self.input_pagam_taxa.currentIndex() == -1),
+                ("Forma de Contribuição",           self.input_forma_contrib.currentIndex() == -1),
+                ("Renda Preponderante",             not val_renda),
+                ("Para Quem Comercializa",          not val_para_quem),
+                ("Dificuldade de Comercialização",  self.input_dificuldade.currentIndex() == -1),
+                ("Responsável pelas Vendas",        self.input_resp_vendas.currentIndex() == -1),
+            ]),
+            ("Finalização e Anexos", [
+                ("Observações",   not self.input_obs.text().strip()),
+                ("Local",         not val_local),
+                ("Arquivos Anexados", len(self.arquivos_anexados) == 0),
+            ]),
+        ]
+
+        # Filtra: mantém só as seções que têm ao menos 1 campo vazio,
+        # e dentro delas, só os rótulos dos campos que estão vazios
+        secoes_resultado = []
+        for nome_secao, campos in estrutura:
+            vazios = [rotulo for rotulo, esta_vazio in campos if esta_vazio]
+            if vazios:
+                secoes_resultado.append((nome_secao, vazios))
+
+        return secoes_resultado
+
+    # =========================================================================
+    # _exibir_popup_campos_vazios
+    # Mostra um popup listando os campos vazios agrupados por seção, com dois
+    # botões: "Continuar" (salva mesmo assim) ou "Voltar" (cancela o salvamento
+    # para o operador completar o formulário). Retorna True se deve continuar
+    # salvando, False se deve interromper.
+    # =========================================================================
+    def _exibir_popup_campos_vazios(self, secoes_com_campos_vazios):
+        linhas_mensagem = ["Os seguintes campos opcionais estão em branco:\n"]
+        for nome_secao, campos_vazios in secoes_com_campos_vazios:
+            linhas_mensagem.append(f"\n{nome_secao}:")
+            for campo in campos_vazios:
+                linhas_mensagem.append(f"   • {campo}")
+
+        linhas_mensagem.append("\n\nDeseja continuar e salvar o cadastro assim mesmo,")
+        linhas_mensagem.append("ou voltar para completar os campos?")
+
+        caixa = QMessageBox(self)
+        caixa.setWindowTitle("Campos em Branco")
+        caixa.setIcon(QMessageBox.Icon.Warning)
+        caixa.setText("\n".join(linhas_mensagem))
+
+        btn_continuar = caixa.addButton("Continuar", QMessageBox.ButtonRole.AcceptRole)
+        btn_voltar    = caixa.addButton("Voltar",    QMessageBox.ButtonRole.RejectRole)
+        caixa.setDefaultButton(btn_voltar)  # "Voltar" é o padrão: evita salvar incompleto por engano
+
+        caixa.exec()
+
+        return caixa.clickedButton() == btn_continuar
+
     # gerar_pdf
     # Placeholder do botão "Gerar PDF" — ainda não implementado.
     # Exige ao menos a Razão Social preenchida antes de prosseguir.
@@ -944,7 +1066,7 @@ class TelaNovoCadastro(QWidget):
     # Também copia os arquivos anexados para a pasta "uploads/" e registra
     # cada um em arquivos_anexos para sincronização futura.
     def salvar_cadastro(self):
-        # Lê o Tipo de Cadastro selecionado
+        # ----- Lê o Tipo de Cadastro selecionado -----
         tipo_cadastro = ""
         for texto, rb in self.radios_tipo.items():
             if rb.isChecked():
@@ -956,7 +1078,7 @@ class TelaNovoCadastro(QWidget):
             QMessageBox.warning(self, "Aviso", "Selecione o Tipo de Cadastro!")
             return
 
-        # Limpeza dos campos com máscara (remove caracteres de formatação)
+        # ----- Limpeza dos campos com máscara (remove caracteres de formatação) -----
         # Observação: como as máscaras agora usam o blank padrão do Qt (espaço,
         # não mais "0" customizado — ver correção do bug de zeros finais cortados),
         # um campo não preenchido já resulta em string vazia após remover a pontuação
@@ -974,19 +1096,19 @@ class TelaNovoCadastro(QWidget):
 
         telefone = self.input_telefone.text().replace("(", "").replace(")", "").replace(" ", "").replace("-", "").strip()
 
-        # Validação do campo obrigatório
+        # ----- Validação do campo obrigatório -----
         if not razao:
             QMessageBox.warning(self, "Aviso", "A Razão Social/Nome é obrigatória!")
             return
 
-        # Lê o campo de Sexo
+        # ----- Lê o campo de Sexo -----
         sexo = ""
         for texto, rb in self.radios_sexo.items():
             if rb.isChecked():
                 sexo = f"Outros: {self.input_outros_sexo.text().strip()}" if texto == "Outros" else texto
                 break
 
-        # Resolve os combos com opção "Outros"
+        # ----- Resolve os combos com opção "Outros" -----
         val_forma_ecosol = f"Outros: {self.input_outros_forma_ecosol.text().strip()}" if self.input_forma_ecosol.currentText() == "Outros" else self.input_forma_ecosol.currentText()
         val_forma_emp    = f"Outros: {self.input_outros_forma_emp.text().strip()}"    if self.input_forma_emp.currentText()    == "Outros" else self.input_forma_emp.currentText()
         val_segmento     = f"Outros: {self.input_outros_segmento.text().strip()}"     if self.input_segmento.currentText()     == "Outros" else self.input_segmento.currentText()
@@ -994,24 +1116,41 @@ class TelaNovoCadastro(QWidget):
         val_para_quem    = f"Outros: {self.input_outros_para_quem.text().strip()}"    if self.input_para_quem.currentText()    == "Outros" else self.input_para_quem.currentText()
         val_local        = f"Outros: {self.input_outros_local.text().strip()}"        if self.input_local.currentText()        == "Outros" else self.input_local.currentText()
 
-        # Converte beneficiários para inteiro (0 se vazio ou não numérico)
+        # ----- Converte beneficiários para inteiro (0 se vazio ou não numérico) -----
         b_dir_m = int(self.in_dir_m.text()) if self.in_dir_m.text().isdigit() else 0
         b_dir_f = int(self.in_dir_f.text()) if self.in_dir_f.text().isdigit() else 0
         b_ind_m = int(self.in_ind_m.text()) if self.in_ind_m.text().isdigit() else 0
         b_ind_f = int(self.in_ind_f.text()) if self.in_ind_f.text().isdigit() else 0
 
-        # Lê os grupos de checkboxes como strings CSV
+        # ----- Lê os grupos de checkboxes como strings CSV -----
         grid_class_social  = self.obter_texto_checkboxes(self.checks_classificacao)
         grid_motivos       = self.obter_texto_checkboxes(self.checks_motivo)
         grid_formas_comerc = self.obter_texto_checkboxes(self.checks_formas_comerc)
 
-        # Metadados do registro
+        # ----- VERIFICAÇÃO DE CAMPOS VAZIOS (opcionais, não bloqueiam o salvamento) -----
+        # Como quase todos os campos são opcionais (só a Razão Social é obrigatória,
+        # já validada acima), avisamos o operador sobre o que ficou em branco antes
+        # de gravar, para que ele possa decidir se quer voltar e completar ou salvar
+        # assim mesmo. Reaproveita os valores já lidos/normalizados acima.
+        secoes_com_campos_vazios = self._verificar_campos_vazios(
+            endereco=endereco, email=email, rg=rg, cep=cep, cnpj=cnpj, cpf=cpf,
+            telefone=telefone, sexo=sexo, val_forma_ecosol=val_forma_ecosol,
+            val_forma_emp=val_forma_emp, val_segmento=val_segmento, val_renda=val_renda,
+            val_para_quem=val_para_quem, val_local=val_local, grid_class_social=grid_class_social,
+            grid_motivos=grid_motivos, grid_formas_comerc=grid_formas_comerc,
+        )
+
+        if secoes_com_campos_vazios:
+            if not self._exibir_popup_campos_vazios(secoes_com_campos_vazios):
+                return  # Operador escolheu "Voltar": interrompe o salvamento aqui
+
+        # ----- Metadados do registro -----
         cadastro_id   = str(uuid.uuid4())                          # ID único para o registro
         data_atual    = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Data/hora do momento do salvamento
         data_form     = self.input_data_form.date().toString("yyyy-MM-dd")  # Data do formulário físico
         responsavel_id = self.usuario_logado_id if self.usuario_logado_id else None  # FK para a tabela usuarios
 
-        # Resolve o grupo_id (histórico de versões)
+        # ----- Resolve o grupo_id (histórico de versões) -----
         # Se self.grupo_id_atual já estiver definido, significa que o operador
         # confirmou carregar um cadastro existente: este novo registro é uma
         # ATUALIZAÇÃO e deve herdar o mesmo grupo_id, mantendo o histórico.
@@ -1055,7 +1194,7 @@ class TelaNovoCadastro(QWidget):
 
             cursor.execute(sql_insert, valores)
 
-            # Copia cada arquivo anexado para "uploads/" e registra no banco
+            # ----- Copia cada arquivo anexado para "uploads/" e registra no banco -----
             for arquivo_origem in self.arquivos_anexados:
                 nome_arquivo    = os.path.basename(arquivo_origem)
                 novo_nome       = f"{cadastro_id}_{nome_arquivo}"      # Prefixo com o ID do cadastro

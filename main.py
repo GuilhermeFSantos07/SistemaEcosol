@@ -3,17 +3,18 @@ import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QStackedWidget, QFrame)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon  # Ícone da janela/barra de tarefas
 from database.db_config import inicializar_banco_local
 from dotenv import load_dotenv
 
 # Carrega as variáveis do .env
 load_dotenv()
 
-COR_PRIMARIA = os.getenv("COR_PRIMARIA",                "#003366")
-COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER",    "#004080")
-COR_BARRA_RODAPE = os.getenv("COR_BARRA_RODAPE",        "#111111")
-COR_TEXTO_CLARO = os.getenv("COR_TEXTO_CLARO",          "#ffffff")
-COR_FUNDO_CLARO = os.getenv("COR_FUNDO_CLARO",          "#f8f9fa")
+COR_PRIMARIA = os.getenv("COR_PRIMARIA", "#003366")
+COR_PRIMARIA_HOVER = os.getenv("COR_PRIMARIA_HOVER", "#004080")
+COR_BARRA_RODAPE = os.getenv("COR_BARRA_RODAPE", "#111111")
+COR_TEXTO_CLARO = os.getenv("COR_TEXTO_CLARO", "#ffffff")
+COR_FUNDO_CLARO = os.getenv("COR_FUNDO_CLARO", "#f8f9fa")
 
 # Importações das suas telas modulares
 from ui.login import TelaLogin
@@ -24,7 +25,7 @@ from ui.cadastros import TelaCadastros
 from ui.relatorios import TelaRelatorios
 
 class PainelSistema(QWidget):
-    # Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé
+    """Área Principal com Menu Lateral Esquerdo, Conteúdo e Rodapé"""
     def __init__(self, usuario_id, nivel_acesso, ao_deslogar):
         super().__init__()
         self.usuario_id = usuario_id
@@ -36,7 +37,7 @@ class PainelSistema(QWidget):
         layout_mestre.setContentsMargins(0, 0, 0, 0)
         layout_mestre.setSpacing(0)
         
-        # CORPO DO SISTEMA (Sidebar + Telas)
+        # ================= CORPO DO SISTEMA (Sidebar + Telas) =================
         corpo_sistema = QWidget()
         layout_corpo = QHBoxLayout(corpo_sistema)
         layout_corpo.setContentsMargins(0, 0, 0, 0)
@@ -122,7 +123,7 @@ class PainelSistema(QWidget):
         layout_corpo.addWidget(self.conteudo_stack)
         layout_mestre.addWidget(corpo_sistema, stretch=1)
 
-        # BARRA DE RODAPÉ INSTITUCIONAL
+        # ================= BARRA DE RODAPÉ INSTITUCIONAL =================
         barra_rodape = QFrame()
         barra_rodape.setObjectName("Rodape")
         barra_rodape.setFixedHeight(35)
@@ -138,13 +139,16 @@ class PainelSistema(QWidget):
 
         layout_mestre.addWidget(barra_rodape)
 
+    # =========================================================================
     # _atualizar_tela_atual
     # Chamado automaticamente sempre que o conteudo_stack troca de tela visível
     # (via sinal currentChanged). Identifica qual tela ficou visível e chama
     # o método de recarregamento correspondente, garantindo que Cadastros e
     # Relatórios sempre mostrem os dados mais recentes do banco local.
+    #
     # Cada tela pode ter um método de recarregamento diferente, então usamos
     # hasattr() para chamar o método certo sem dar erro caso a tela mude no futuro.
+    # =========================================================================
     def _atualizar_tela_atual(self, indice):
         tela_visivel = self.conteudo_stack.widget(indice)  # Pega o widget da tela que ficou ativa
 
@@ -168,12 +172,20 @@ class PainelSistema(QWidget):
 
 
 class JanelaPrincipal(QMainWindow):
-    # Janela Mestra do Software
+    """Janela Mestra do Software"""
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sistema Ecosol - Cadastro Offline")
         self.setMinimumSize(1024, 720)
-        
+
+        # Ícone da janela: aparece no canto superior esquerdo da janela, na
+        # barra de tarefas do Windows enquanto o programa está aberto, e no
+        # Alt+Tab. Não confundir com o ícone do executável (.exe) em si — esse
+        # é definido separadamente via "--icon" no momento de gerar o .exe.
+        # O arquivo precisa estar na mesma pasta do main.py (ou no caminho
+        # informado abaixo) para o ícone aparecer corretamente.
+        self.setWindowIcon(QIcon("ecosol_icone.ico"))
+
         self.stacked_central = QStackedWidget()
         self.setCentralWidget(self.stacked_central)
         
@@ -194,7 +206,7 @@ class JanelaPrincipal(QMainWindow):
         self.showMaximized()
 
 
-# STYLESHEET (QSS) DINÂMICO
+# ================= STYLESHEET (QSS) DINÂMICO =================
 STYLE_FIEL_BLINDADO = f"""
     /* ── BASE ── */
     QWidget {{

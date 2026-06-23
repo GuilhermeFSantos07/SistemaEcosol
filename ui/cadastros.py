@@ -11,7 +11,8 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem,       # Tabela de resultados
     QComboBox, QGroupBox,                 # Combo de tipo de busca e agrupador
     QHeaderView, QAbstractScrollArea,     # Configurações do cabeçalho e scroll
-    QSizePolicy, QAbstractItemView        # Política de tamanho dos widgets
+    QSizePolicy, QAbstractItemView,       # Política de tamanho dos widgets
+    QDialog                               # Janela popup do histórico de versões
 )
 from PyQt6.QtCore import Qt              # Constantes de alinhamento e flags
 
@@ -88,6 +89,10 @@ COLUNAS_TABELA = [
     ("data_cadastro",               "Data Cadastro"),
     ("sincronizado",                "Sincronizado"),
 ]
+
+# Nome interno usado só para identificar a posição da coluna de ações na tabela
+# (não corresponde a nenhuma coluna real do banco, é só para a UI)
+INDICE_COLUNA_ACOES = len(COLUNAS_TABELA)
 
 
 # =============================================================================
@@ -192,7 +197,7 @@ class TelaCadastros(QWidget):
 
         # ----- Botão Pesquisar (à direita do campo de texto) -----
         # Estilo azul ciano (COR_SECUNDARIA), mesmo do btn_testar em sincronizacao.py
-        btn_pesquisar = QPushButton("🔍  Pesquisar")
+        btn_pesquisar = QPushButton("Pesquisar")
         btn_pesquisar.setFixedWidth(140)   # Largura fixa para aparência uniforme
         btn_pesquisar.setStyleSheet(f"""
             QPushButton {{
@@ -245,12 +250,13 @@ class TelaCadastros(QWidget):
         # =================================================================
         self.tabela = QTableWidget()
 
-        # Define a quantidade de colunas com base na lista COLUNAS_TABELA
-        self.tabela.setColumnCount(len(COLUNAS_TABELA))
+        # Define a quantidade de colunas com base na lista COLUNAS_TABELA, mais
+        # 1 coluna extra de "Ações" no final (botão de Histórico de versões)
+        self.tabela.setColumnCount(len(COLUNAS_TABELA) + 1)
 
-        # Define os cabeçalhos com os textos amigáveis da lista COLUNAS_TABELA
+        # Define os cabeçalhos: as colunas do banco + o cabeçalho da coluna de ações
         self.tabela.setHorizontalHeaderLabels(
-            [cabecalho for _, cabecalho in COLUNAS_TABELA]
+            [cabecalho for _, cabecalho in COLUNAS_TABELA] + ["Histórico"]
         )
 
         # Estilo da tabela: fundo branco, gridlines suaves, cabeçalho destacado
@@ -312,6 +318,13 @@ class TelaCadastros(QWidget):
             QHeaderView.ResizeMode.ResizeToContents  # Cada coluna ajusta ao conteúdo
         )
 
+        # A coluna de Ações (última, índice INDICE_COLUNA_ACOES) tem largura fixa,
+        # suficiente para o botão de histórico, independente do conteúdo
+        self.tabela.horizontalHeader().setSectionResizeMode(
+            INDICE_COLUNA_ACOES, QHeaderView.ResizeMode.Fixed
+        )
+        self.tabela.setColumnWidth(INDICE_COLUNA_ACOES, 110)
+
         # Garante que a tabela expanda verticalmente para ocupar o espaço disponível
         self.tabela.setSizePolicy(
             QSizePolicy.Policy.Expanding,   # Expande horizontalmente
@@ -331,8 +344,12 @@ class TelaCadastros(QWidget):
     # no campo de texto, ou ao clicar no botão "Pesquisar".
     #
     # Lógica:
-    #   - Se o campo de texto estiver vazio → SELECT sem filtro (lista tudo)
-    #   - Se tiver texto → SELECT com LIKE '%termo%' na coluna escolhida no combo
+    #   - Primeiro filtra para trazer SOMENTE a versão mais recente de cada
+    #     "pessoa/empreendimento" (mesmo grupo_id) — cadastros antigos que já
+    #     foram atualizados não aparecem na lista principal, só no histórico.
+    #   - Se o campo de texto estiver vazio → lista todas as versões mais recentes
+    #   - Se tiver texto → aplica LIKE '%termo%' na coluna escolhida no combo,
+    #     dentro desse conjunto já filtrado pela versão mais recente
     #
     # Usa LIKE com % dos dois lados para busca parcial (não precisa palavra exata).
     # =========================================================================
@@ -341,19 +358,44 @@ class TelaCadastros(QWidget):
         tipo_amig   = self.combo_tipo.currentText()              # Lê o texto amigável do combo
         coluna_db   = CAMPOS_PESQUISA.get(tipo_amig, "razao_social_nome")  # Traduz para nome do banco
 
-        # Monta as colunas do SELECT na mesma ordem de COLUNAS_TABELA
+        # Monta as colunas do SELECT na mesma ordem de COLUNAS_TABELA, e inclui
+        # o grupo_id ao final — necessário para o botão de Histórico, mas não é
+        # uma coluna visível na tabela principal (tratado separadamente)
         colunas_select = ", ".join(col for col, _ in COLUNAS_TABELA)
+
+        # Subquery que identifica os "id" das versões mais recentes: para cada
+        # grupo_id, pega a linha cujo data_cadastro é o maior (mais recente).
+        # Isso garante que cadastros antigos já atualizados fiquem de fora da
+        # lista principal, mesmo que tenham o mesmo grupo_id de outra linha.
+        filtro_versao_recente = """
+            id IN (
+                SELECT c1.id FROM cadastros_ecosol c1
+                WHERE c1.data_cadastro = (
+                    SELECT MAX(c2.data_cadastro) FROM cadastros_ecosol c2
+                    WHERE c2.grupo_id = c1.grupo_id
+                )
+            )
+        """
 
         conn   = sqlite3.connect('ecosol_local.db')  # Abre conexão com o banco local
         cursor = conn.cursor()
 
         if termo:
-            # Pesquisa com filtro: LIKE '%termo%' busca qualquer ocorrência parcial
-            sql = f"SELECT {colunas_select} FROM cadastros_ecosol WHERE {coluna_db} LIKE ?"
+            # Pesquisa com filtro: LIKE '%termo%' busca qualquer ocorrência parcial,
+            # combinado com o filtro de versão mais recente (AND)
+            sql = f"""
+                SELECT {colunas_select}, grupo_id FROM cadastros_ecosol
+                WHERE {filtro_versao_recente} AND {coluna_db} LIKE ?
+                ORDER BY data_cadastro DESC
+            """
             cursor.execute(sql, (f"%{termo}%",))  # Parâmetro com wildcards
         else:
-            # Sem filtro: lista todos os cadastros ordenados pela data de cadastro mais recente
-            sql = f"SELECT {colunas_select} FROM cadastros_ecosol ORDER BY data_cadastro DESC"
+            # Sem filtro de texto: lista todas as versões mais recentes
+            sql = f"""
+                SELECT {colunas_select}, grupo_id FROM cadastros_ecosol
+                WHERE {filtro_versao_recente}
+                ORDER BY data_cadastro DESC
+            """
             cursor.execute(sql)
 
         resultados = cursor.fetchall()  # Recupera todos os registros retornados
@@ -372,8 +414,10 @@ class TelaCadastros(QWidget):
 
     # =========================================================================
     # _preencher_tabela
-    # Recebe a lista de registros do banco e preenche a tabela linha por linha.
-    # Também atualiza o contador de resultados no label lbl_contador.
+    # Recebe a lista de registros do banco (já incluindo grupo_id como último
+    # elemento de cada linha) e preenche a tabela linha por linha. Também
+    # adiciona o botão de "Histórico" na última coluna, exibido somente para
+    # grupos que têm mais de uma versão registrada.
     #
     # Prefixo _ indica método interno — não chamado diretamente pela UI.
     # =========================================================================
@@ -386,11 +430,19 @@ class TelaCadastros(QWidget):
             f"{total} cadastro(s) encontrado(s)"
         )
 
+        # Descobre de antemão quais grupo_id têm mais de uma versão no banco,
+        # numa única consulta (evita 1 query por linha dentro do loop abaixo)
+        grupos_com_historico = self._buscar_grupos_com_historico()
+
         # Itera pelos registros e preenche célula por célula
         for linha_idx, linha_dados in enumerate(resultados):
             self.tabela.insertRow(linha_idx)  # Insere uma linha vazia na posição correta
 
-            for col_idx, valor in enumerate(linha_dados):
+            # O último elemento da linha é o grupo_id (adicionado no SELECT de
+            # pesquisar()), que não é uma coluna visível — separamos ele aqui
+            *valores_visiveis, grupo_id = linha_dados
+
+            for col_idx, valor in enumerate(valores_visiveis):
                 # Converte None (valor nulo do SQLite) para string vazia para exibição limpa
                 texto = str(valor) if valor is not None else ""
 
@@ -399,5 +451,149 @@ class TelaCadastros(QWidget):
                                       Qt.AlignmentFlag.AlignLeft)      # Alinha horizontalmente à esquerda
                 self.tabela.setItem(linha_idx, col_idx, item)          # Insere na tabela
 
+            # ----- Coluna de Ações: botão de Histórico (somente se houver mais de 1 versão) -----
+            if grupo_id in grupos_com_historico:
+                btn_historico = QPushButton("Histórico")
+                btn_historico.setToolTip("Ver versões anteriores deste cadastro")
+                btn_historico.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {COR_SECUNDARIA};
+                        color: {COR_TEXTO_CLARO};
+                        padding: 4px 8px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        border-radius: 4px;
+                        border: none;
+                    }}
+                    QPushButton:hover {{ background-color: {COR_PRIMARIA}; }}
+                """)
+                # Lambda com argumento padrão captura o grupo_id correto desta iteração
+                btn_historico.clicked.connect(lambda checked, gid=grupo_id: self.abrir_historico(gid))
+                self.tabela.setCellWidget(linha_idx, INDICE_COLUNA_ACOES, btn_historico)
+
             # Altura uniforme para todas as linhas
             self.tabela.setRowHeight(linha_idx, 36)
+
+    # =========================================================================
+    # _buscar_grupos_com_historico
+    # Consulta quais grupo_id têm MAIS DE UMA linha na tabela cadastros_ecosol
+    # (ou seja, já passaram por pelo menos uma atualização cadastral).
+    # Retorna um set de grupo_id para checagem rápida (O(1)) dentro do loop.
+    # =========================================================================
+    def _buscar_grupos_com_historico(self):
+        conn   = sqlite3.connect('ecosol_local.db')
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT grupo_id FROM cadastros_ecosol
+            GROUP BY grupo_id
+            HAVING COUNT(*) > 1
+        """)
+        grupos = {linha[0] for linha in cursor.fetchall()}
+        conn.close()
+        return grupos
+
+    # =========================================================================
+    # abrir_historico
+    # Abre uma janela (QDialog) somente leitura com todas as versões antigas
+    # do grupo_id informado, ordenadas da mais antiga para a mais recente,
+    # para consulta e auditoria. Chamado pelo botão "🕒 Histórico" da linha.
+    # =========================================================================
+    def abrir_historico(self, grupo_id):
+        conn   = sqlite3.connect('ecosol_local.db')
+        cursor = conn.cursor()
+
+        colunas_select = ", ".join(col for col, _ in COLUNAS_TABELA)
+        cursor.execute(f"""
+            SELECT {colunas_select} FROM cadastros_ecosol
+            WHERE grupo_id = ?
+            ORDER BY data_cadastro ASC
+        """, (grupo_id,))
+        versoes = cursor.fetchall()
+        conn.close()
+
+        dialogo = QDialog(self)
+        dialogo.setWindowTitle("Histórico de Atualizações Cadastrais")
+        dialogo.resize(1000, 500)
+
+        layout_dialogo = QVBoxLayout(dialogo)
+        layout_dialogo.setContentsMargins(20, 20, 20, 20)
+        layout_dialogo.setSpacing(12)
+
+        titulo = QLabel(f"Histórico de Versões ({len(versoes)} registro(s))")
+        titulo.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; color: {COR_PRIMARIA}; "
+            f"border-bottom: 2px solid {COR_PRIMARIA}; padding-bottom: 5px;"
+        )
+        layout_dialogo.addWidget(titulo)
+
+        subtitulo = QLabel(
+            "A primeira linha é o cadastro original; as demais são atualizações "
+            "cadastrais posteriores, da mais antiga para a mais recente."
+        )
+        subtitulo.setStyleSheet("color: #6c757d; font-size: 12px;")
+        subtitulo.setWordWrap(True)
+        layout_dialogo.addWidget(subtitulo)
+
+        tabela_historico = QTableWidget()
+        tabela_historico.setColumnCount(len(COLUNAS_TABELA))
+        tabela_historico.setHorizontalHeaderLabels([cabecalho for _, cabecalho in COLUNAS_TABELA])
+        tabela_historico.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)  # Somente leitura
+        tabela_historico.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        tabela_historico.verticalHeader().setVisible(False)
+        tabela_historico.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
+        tabela_historico.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        tabela_historico.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        tabela_historico.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {COR_TEXTO_CLARO};
+                border: 1px solid {COR_BORDA};
+                border-radius: 6px;
+                gridline-color: #f0f2f7;
+                font-size: 12px;
+            }}
+            QTableWidget::item {{ padding: 6px 10px; }}
+            QHeaderView::section {{
+                background-color: #f5f7fc;
+                color: #5a6380;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 8px 6px;
+                border: none;
+                border-bottom: 2px solid {COR_BORDA};
+            }}
+        """)
+
+        tabela_historico.setRowCount(len(versoes))
+        for linha_idx, linha_dados in enumerate(versoes):
+            for col_idx, valor in enumerate(linha_dados):
+                texto = str(valor) if valor is not None else ""
+                item = QTableWidgetItem(texto)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+                tabela_historico.setItem(linha_idx, col_idx, item)
+            tabela_historico.setRowHeight(linha_idx, 34)
+
+        layout_dialogo.addWidget(tabela_historico)
+
+        btn_fechar = QPushButton("Fechar")
+        btn_fechar.setFixedWidth(120)
+        btn_fechar.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COR_PRIMARIA};
+                color: {COR_TEXTO_CLARO};
+                padding: 8px 16px;
+                font-weight: bold;
+                border-radius: 4px;
+                border: none;
+            }}
+            QPushButton:hover {{ background-color: {COR_PRIMARIA_HOVER}; }}
+        """)
+        btn_fechar.clicked.connect(dialogo.accept)
+
+        layout_btn = QHBoxLayout()
+        layout_btn.addStretch()
+        layout_btn.addWidget(btn_fechar)
+        layout_dialogo.addLayout(layout_btn)
+
+        dialogo.exec()

@@ -103,6 +103,25 @@ COLUNAS_PADRAO_MARCADAS = {
     "telefone", "email", "local_cadastro", "data_cadastro",
 }
 
+# =============================================================================
+# FILTRO_VERSAO_RECENTE
+# Trecho SQL reutilizado em todas as consultas de estatística e exportação.
+# Garante que cada "pessoa/empreendimento" (identificado por grupo_id) seja
+# contado apenas UMA vez, usando sempre a versão mais recente do cadastro —
+# mesmo que ela tenha passado por uma ou mais atualizações cadastrais.
+# Sem este filtro, uma pessoa atualizada 2 vezes apareceria como 3 cadastros
+# diferentes nos números e nas exportações, inflando as estatísticas.
+# =============================================================================
+FILTRO_VERSAO_RECENTE = """
+    id IN (
+        SELECT c1.id FROM cadastros_ecosol c1
+        WHERE c1.data_cadastro = (
+            SELECT MAX(c2.data_cadastro) FROM cadastros_ecosol c2
+            WHERE c2.grupo_id = c1.grupo_id
+        )
+    )
+"""
+
 
 # =============================================================================
 # TelaRelatorios
@@ -327,32 +346,45 @@ class TelaRelatorios(QWidget):
         conn   = sqlite3.connect('ecosol_local.db')  # Abre conexão com o banco local
         cursor = conn.cursor()
 
-        # ----- Total de cadastros -----
-        cursor.execute("SELECT COUNT(*) FROM cadastros_ecosol")
+        # ----- Total de cadastros (pessoas/empreendimentos únicos, versão mais recente) -----
+        cursor.execute(f"SELECT COUNT(*) FROM cadastros_ecosol WHERE {FILTRO_VERSAO_RECENTE}")
         total = cursor.fetchone()[0]  # fetchone retorna uma tupla; [0] pega o primeiro valor
 
         # ----- Quantidade com CNPJ preenchido (não nulo e não vazio) -----
-        cursor.execute("SELECT COUNT(*) FROM cadastros_ecosol WHERE cnpj IS NOT NULL AND cnpj != ''")
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM cadastros_ecosol
+            WHERE {FILTRO_VERSAO_RECENTE} AND cnpj IS NOT NULL AND cnpj != ''
+        """)
         com_cnpj = cursor.fetchone()[0]
 
         # ----- Quantidade com CPF preenchido -----
-        cursor.execute("SELECT COUNT(*) FROM cadastros_ecosol WHERE cpf IS NOT NULL AND cpf != ''")
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM cadastros_ecosol
+            WHERE {FILTRO_VERSAO_RECENTE} AND cpf IS NOT NULL AND cpf != ''
+        """)
         com_cpf = cursor.fetchone()[0]
 
         # ----- Quantidade do sexo Masculino -----
         # Usa LIKE para cobrir variações de capitalização ("Masculino", "masculino")
-        cursor.execute("SELECT COUNT(*) FROM cadastros_ecosol WHERE sexo LIKE 'Masculino%'")
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM cadastros_ecosol
+            WHERE {FILTRO_VERSAO_RECENTE} AND sexo LIKE 'Masculino%'
+        """)
         homens = cursor.fetchone()[0]
 
         # ----- Quantidade do sexo Feminino -----
-        cursor.execute("SELECT COUNT(*) FROM cadastros_ecosol WHERE sexo LIKE 'Feminino%'")
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM cadastros_ecosol
+            WHERE {FILTRO_VERSAO_RECENTE} AND sexo LIKE 'Feminino%'
+        """)
         mulheres = cursor.fetchone()[0]
 
         # ----- Distribuição por local de cadastro (agrupado, contagem decrescente) -----
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT local_cadastro, COUNT(*) as qtd
             FROM cadastros_ecosol
-            WHERE local_cadastro IS NOT NULL AND local_cadastro != ''
+            WHERE {FILTRO_VERSAO_RECENTE}
+                AND local_cadastro IS NOT NULL AND local_cadastro != ''
             GROUP BY local_cadastro
             ORDER BY qtd DESC
         """)
@@ -508,6 +540,12 @@ class TelaRelatorios(QWidget):
         # ----- Checkbox: Habilitar filtro de data -----
         # Por padrão o filtro de data fica desabilitado (exporta todas as datas)
         self.check_usar_filtro_data = QCheckBox("Filtrar por intervalo de datas")
+        self.check_usar_filtro_data.setToolTip(
+            "Quando marcado, a exportação considera cada cadastro pela sua\n"
+            "própria data, incluindo versões antigas de atualizações cadastrais.\n"
+            "Quando desmarcado, exporta apenas a versão mais recente de cada\n"
+            "pessoa/empreendimento (evita duplicidade nos números)."
+        )
         self.check_usar_filtro_data.toggled.connect(self.filtro_data_inicio.setEnabled)
         self.check_usar_filtro_data.toggled.connect(self.filtro_data_fim.setEnabled)
         self.filtro_data_inicio.setEnabled(False)  # Começa desabilitado
@@ -724,11 +762,14 @@ class TelaRelatorios(QWidget):
             linha_atual += 1
 
             # Consulta novamente o banco para obter a distribuição por local
+            # (mesmo filtro de versão mais recente usado no dashboard, para
+            # manter os números do Excel consistentes com os cards na tela)
             conn   = sqlite3.connect('ecosol_local.db')
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT local_cadastro, COUNT(*) FROM cadastros_ecosol
-                WHERE local_cadastro IS NOT NULL AND local_cadastro != ''
+                WHERE {FILTRO_VERSAO_RECENTE}
+                    AND local_cadastro IS NOT NULL AND local_cadastro != ''
                 GROUP BY local_cadastro ORDER BY COUNT(*) DESC
             """)
             distribuicao = cursor.fetchall()
@@ -772,6 +813,15 @@ class TelaRelatorios(QWidget):
         # ----- Monta a cláusula WHERE dinamicamente com base nos filtros -----
         condicoes  = []   # Lista de trechos SQL tipo "coluna = ?"
         parametros = []   # Lista de valores correspondentes aos "?" acima
+
+        # Filtro de versão mais recente (evita duplicidade de pessoas atualizadas):
+        # só é aplicado quando o filtro de DATA está desligado. Quando o operador
+        # quer ver especificamente o que foi cadastrado/atualizado num intervalo
+        # de datas (ex: "tudo desta ação"), cada versão deve contar pela sua
+        # própria data — inclusive versões antigas — então o filtro de versão
+        # mais recente seria incompatível e esconderia exatamente o que se busca.
+        if not self.check_usar_filtro_data.isChecked():
+            condicoes.append(FILTRO_VERSAO_RECENTE)
 
         # Filtro de Tipo de Cadastro (só aplica se não estiver em "Todos")
         if self.filtro_tipo.currentText() != "Todos":
